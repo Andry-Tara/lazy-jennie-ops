@@ -89,6 +89,7 @@ export default async function DashboardPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-100 p-8 text-zinc-900">
         <div className="w-full max-w-lg rounded-2xl bg-white p-8 text-center shadow-sm">
+
           <p className="text-sm font-bold tracking-wider text-red-800">
             LAZY JENNIE
           </p>
@@ -101,36 +102,39 @@ export default async function DashboardPage() {
             Your account is currently inactive.
             Please contact the system administrator.
           </p>
+
         </div>
       </main>
     )
   }
 
-  // =====================================================
-  // DASHBOARD
-  // =====================================================
-
   return (
     <main className="min-h-screen bg-zinc-100 p-8 text-zinc-900">
       <div className="mx-auto max-w-7xl">
 
-        {/* HEADER */}
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
         <div className="mb-10">
+
           <p className="text-sm font-bold tracking-wider text-red-800">
             LAZY JENNIE
           </p>
 
-          <h1 className="mt-2 text-4xl font-bold text-zinc-900">
+          <h1 className="mt-2 text-4xl font-bold">
             Operations Dashboard
           </h1>
 
           <p className="mt-2 text-zinc-500">
-            Central Kitchen, Inventory & Outlet Management
+            Central Kitchen, Inventory, Purchasing & Outlet Management
           </p>
+
         </div>
 
-        {/* ERROR */}
+        {/* =====================================================
+            ERROR
+        ===================================================== */}
 
         {profileError && (
           <div className="mb-6 rounded-xl bg-red-50 p-4 text-red-700">
@@ -138,9 +142,12 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* USER INFO */}
+        {/* =====================================================
+            USER INFO
+        ===================================================== */}
 
         <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+
           <p className="text-sm text-zinc-500">
             Welcome
           </p>
@@ -170,9 +177,24 @@ export default async function DashboardPage() {
             )}
 
           </div>
+
         </div>
 
-        {/* MENU */}
+        {/* =====================================================
+            OPERATION MENU
+        ===================================================== */}
+
+        <div className="mb-5">
+
+          <h2 className="text-xl font-bold">
+            Operations
+          </h2>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            Daily operational modules
+          </p>
+
+        </div>
 
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
 
@@ -182,6 +204,7 @@ export default async function DashboardPage() {
             href="/dashboard/inventory"
             className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
           >
+
             <div className="text-3xl">
               📦
             </div>
@@ -193,7 +216,39 @@ export default async function DashboardPage() {
             <p className="mt-2 text-sm text-zinc-500">
               Current Stock, Movement & Monitoring
             </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Open Inventory →
+            </p>
+
           </Link>
+
+
+          {/* CENTRAL KITCHEN */}
+
+          <Link
+            href="/dashboard/production"
+            className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+
+            <div className="text-3xl">
+              🏭
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold">
+              Central Kitchen
+            </h3>
+
+            <p className="mt-2 text-sm text-zinc-500">
+              Production, WIP & Finished Goods
+            </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Open Production →
+            </p>
+
+          </Link>
+
 
           {/* RECEIVING */}
 
@@ -201,6 +256,7 @@ export default async function DashboardPage() {
             href="/dashboard/receiving"
             className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
           >
+
             <div className="text-3xl">
               📥
             </div>
@@ -210,9 +266,109 @@ export default async function DashboardPage() {
             </h3>
 
             <p className="mt-2 text-sm text-zinc-500">
-              Supplier Goods Receiving
+              Supplier Goods Receiving & Stock In
             </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Open Receiving →
+            </p>
+
           </Link>
+
+
+          {/* PURCHASING */}
+
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+
+            <div className="text-3xl">
+              🛒
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold">
+              Purchasing
+            </h3>
+
+            <p className="mt-2 text-sm text-zinc-500">
+              Purchase Order & Supplier Purchasing
+            </p>
+
+            <span className="mt-5 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+              Next Module
+            </span>
+
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            MASTER DATA
+        ===================================================== */}
+
+        <div className="mb-5 mt-10">
+
+          <h2 className="text-xl font-bold">
+            Master Data
+          </h2>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            System configuration and operational masters
+          </p>
+
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+
+          {/* MASTER ITEM */}
+
+          <Link
+            href="/dashboard/items"
+            className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+
+            <div className="text-3xl">
+              🧺
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold">
+              Master Item
+            </h3>
+
+            <p className="mt-2 text-sm text-zinc-500">
+              Raw Material, WIP & Finished Goods
+            </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Manage Items →
+            </p>
+
+          </Link>
+
+
+          {/* MASTER RECIPE */}
+
+          <Link
+            href="/dashboard/recipes"
+            className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+
+            <div className="text-3xl">
+              📋
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold">
+              Master Recipe
+            </h3>
+
+            <p className="mt-2 text-sm text-zinc-500">
+              Recipe, BOM & Production Yield
+            </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Manage Recipes →
+            </p>
+
+          </Link>
+
 
           {/* SUPPLIER */}
 
@@ -220,6 +376,7 @@ export default async function DashboardPage() {
             href="/dashboard/suppliers"
             className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
           >
+
             <div className="text-3xl">
               🚚
             </div>
@@ -231,14 +388,21 @@ export default async function DashboardPage() {
             <p className="mt-2 text-sm text-zinc-500">
               Supplier Master Data
             </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Manage Suppliers →
+            </p>
+
           </Link>
 
-          {/* OUTLET */}
+
+          {/* OUTLETS */}
 
           <Link
             href="/dashboard/outlets"
             className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
           >
+
             <div className="text-3xl">
               🏪
             </div>
@@ -250,51 +414,37 @@ export default async function DashboardPage() {
             <p className="mt-2 text-sm text-zinc-500">
               Central Kitchen & Outlet Management
             </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Manage Locations →
+            </p>
+
           </Link>
 
-          {/* CENTRAL KITCHEN */}
+        </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <div className="text-3xl">
-              🏭
-            </div>
+        {/* =====================================================
+            MANAGEMENT
+        ===================================================== */}
 
-            <h3 className="mt-4 text-lg font-bold">
-              Central Kitchen
-            </h3>
+        <div className="mb-5 mt-10">
 
-            <p className="mt-2 text-sm text-zinc-500">
-              Production & Transfer
-            </p>
+          <h2 className="text-xl font-bold">
+            Management
+          </h2>
 
-            <span className="mt-4 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
-              Coming Soon
-            </span>
-          </div>
+          <p className="mt-1 text-sm text-zinc-500">
+            Cost, sales and management reporting
+          </p>
 
-          {/* PURCHASING */}
+        </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <div className="text-3xl">
-              🛒
-            </div>
-
-            <h3 className="mt-4 text-lg font-bold">
-              Purchasing
-            </h3>
-
-            <p className="mt-2 text-sm text-zinc-500">
-              Purchase Request & Purchase Order
-            </p>
-
-            <span className="mt-4 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
-              Coming Soon
-            </span>
-          </div>
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
 
           {/* COGS */}
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
+
             <div className="text-3xl">
               🧾
             </div>
@@ -304,17 +454,20 @@ export default async function DashboardPage() {
             </h3>
 
             <p className="mt-2 text-sm text-zinc-500">
-              Recipe, Cost & Food Cost
+              Recipe Cost, Food Cost & Inventory Valuation
             </p>
 
-            <span className="mt-4 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
+            <span className="mt-5 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
               Coming Soon
             </span>
+
           </div>
+
 
           {/* POS */}
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
+
             <div className="text-3xl">
               💳
             </div>
@@ -324,17 +477,20 @@ export default async function DashboardPage() {
             </h3>
 
             <p className="mt-2 text-sm text-zinc-500">
-              Sales & Transactions
+              Sales, Menu & Transactions
             </p>
 
-            <span className="mt-4 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
+            <span className="mt-5 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
               Coming Soon
             </span>
+
           </div>
 
-          {/* REPORTS */}
+
+          {/* REPORT */}
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
+
             <div className="text-3xl">
               📊
             </div>
@@ -347,14 +503,17 @@ export default async function DashboardPage() {
               Operational & Management Reports
             </p>
 
-            <span className="mt-4 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
+            <span className="mt-5 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
               Coming Soon
             </span>
+
           </div>
+
 
           {/* USERS */}
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
+
             <div className="text-3xl">
               👥
             </div>
@@ -364,15 +523,17 @@ export default async function DashboardPage() {
             </h3>
 
             <p className="mt-2 text-sm text-zinc-500">
-              User & Role Management
+              User, Role & Access Management
             </p>
 
-            <span className="mt-4 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
+            <span className="mt-5 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
               Coming Soon
             </span>
+
           </div>
 
         </div>
+
       </div>
     </main>
   )
