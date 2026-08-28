@@ -67,7 +67,7 @@ export default async function PurchasingPage() {
     `)
 
   // =====================================================
-  // PO ITEMS
+  // PURCHASE ORDER ITEMS
   // =====================================================
 
   const { data: poItems } = await supabase
@@ -174,6 +174,12 @@ export default async function PurchasingPage() {
         'FULLY_RECEIVED'
     ).length
 
+  const cancelledCount =
+    (purchaseOrders || []).filter(
+      (row) =>
+        row.status === 'CANCELLED'
+    ).length
+
   const totalValue =
     (purchaseOrders || []).reduce(
       (total, row) =>
@@ -221,15 +227,13 @@ export default async function PurchasingPage() {
     }
 
     if (
-      status ===
-      'CANCELLED'
+      status === 'CANCELLED'
     ) {
       return 'bg-red-100 text-red-700'
     }
 
     if (
-      status ===
-      'DRAFT'
+      status === 'DRAFT'
     ) {
       return 'bg-zinc-100 text-zinc-600'
     }
@@ -298,6 +302,13 @@ export default async function PurchasingPage() {
           <div className="flex flex-wrap gap-3">
 
             <Link
+              href="/dashboard/purchasing/monitoring"
+              className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
+            >
+              Purchase Monitoring
+            </Link>
+
+            <Link
               href="/dashboard/receiving"
               className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
             >
@@ -319,7 +330,7 @@ export default async function PurchasingPage() {
             SUMMARY
         ===================================================== */}
 
-        <div className="mb-8 grid gap-4 md:grid-cols-5">
+        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-6">
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
 
@@ -365,6 +376,18 @@ export default async function PurchasingPage() {
 
             <p className="mt-2 text-3xl font-bold text-green-700">
               {fullCount}
+            </p>
+
+          </div>
+
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+
+            <p className="text-sm text-zinc-500">
+              Cancelled
+            </p>
+
+            <p className="mt-2 text-3xl font-bold text-red-700">
+              {cancelledCount}
             </p>
 
           </div>
@@ -486,8 +509,7 @@ export default async function PurchasingPage() {
                       }
 
                     const canReceive =
-                      po.status ===
-                        'POSTED' ||
+                      po.status === 'POSTED' ||
                       po.status ===
                         'PARTIALLY_RECEIVED'
 
@@ -498,16 +520,18 @@ export default async function PurchasingPage() {
                         className="hover:bg-zinc-50"
                       >
 
-                        {/* PO */}
+                        {/* PO NUMBER */}
 
                         <td className="px-5 py-4">
 
-                          <p className="font-bold text-red-900">
+                          <Link
+                            href={`/dashboard/purchasing/${po.id}`}
+                            className="font-bold text-red-900 hover:underline"
+                          >
                             {po.po_no}
-                          </p>
+                          </Link>
 
                         </td>
-
 
                         {/* SUPPLIER */}
 
@@ -523,7 +547,6 @@ export default async function PurchasingPage() {
 
                         </td>
 
-
                         {/* LOCATION */}
 
                         <td className="px-5 py-4">
@@ -538,20 +561,17 @@ export default async function PurchasingPage() {
 
                         </td>
 
-
                         {/* ORDER DATE */}
 
                         <td className="px-5 py-4">
                           {po.order_date}
                         </td>
 
-
                         {/* EXPECTED */}
 
                         <td className="px-5 py-4">
                           {po.expected_date || '-'}
                         </td>
-
 
                         {/* PROGRESS */}
 
@@ -579,7 +599,6 @@ export default async function PurchasingPage() {
 
                         </td>
 
-
                         {/* VALUE */}
 
                         <td className="px-5 py-4 text-right font-semibold">
@@ -587,7 +606,6 @@ export default async function PurchasingPage() {
                             po.total_amount
                           )}
                         </td>
-
 
                         {/* STATUS */}
 
@@ -605,34 +623,38 @@ export default async function PurchasingPage() {
 
                         </td>
 
-
                         {/* ACTION */}
 
                         <td className="px-5 py-4">
 
-                          {canReceive ? (
+                          <div className="flex flex-wrap gap-2">
 
                             <Link
-                              href={`/dashboard/purchasing/${po.id}/receive`}
-                              className="inline-flex rounded-lg bg-red-900 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
+                              href={`/dashboard/purchasing/${po.id}`}
+                              className="inline-flex rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-zinc-50"
                             >
-                              Receive
+                              Detail
                             </Link>
 
-                          ) : po.status ===
-                            'FULLY_RECEIVED' ? (
+                            {canReceive ? (
 
-                            <span className="inline-flex rounded-lg bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
-                              Complete
-                            </span>
+                              <Link
+                                href={`/dashboard/purchasing/${po.id}/receive`}
+                                className="inline-flex rounded-lg bg-red-900 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
+                              >
+                                Receive
+                              </Link>
 
-                          ) : (
+                            ) : po.status ===
+                              'FULLY_RECEIVED' ? (
 
-                            <span className="text-sm text-zinc-400">
-                              -
-                            </span>
+                              <span className="inline-flex rounded-lg bg-green-50 px-4 py-2 text-sm font-semibold text-green-700">
+                                Complete
+                              </span>
 
-                          )}
+                            ) : null}
+
+                          </div>
 
                         </td>
 
@@ -647,7 +669,7 @@ export default async function PurchasingPage() {
             </table>
 
             {/* =====================================================
-                EMPTY
+                EMPTY STATE
             ===================================================== */}
 
             {!purchaseOrders?.length && (
