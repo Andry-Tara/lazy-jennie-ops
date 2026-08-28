@@ -65,6 +65,7 @@ export default async function DashboardPage() {
   // =====================================================
 
   let outletName = 'All Locations'
+  let outletCode = ''
 
   if (profile?.outlet_id) {
     const { data: outlet } = await supabase
@@ -78,16 +79,18 @@ export default async function DashboardPage() {
 
     if (outlet) {
       outletName = outlet.name
+      outletCode = outlet.code
     }
   }
 
   // =====================================================
-  // ACTIVE CHECK
+  // INACTIVE ACCOUNT
   // =====================================================
 
   if (profile && !profile.is_active) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-100 p-8 text-zinc-900">
+
         <div className="w-full max-w-lg rounded-2xl bg-white p-8 text-center shadow-sm">
 
           <p className="text-sm font-bold tracking-wider text-red-800">
@@ -104,12 +107,14 @@ export default async function DashboardPage() {
           </p>
 
         </div>
+
       </main>
     )
   }
 
   return (
     <main className="min-h-screen bg-zinc-100 p-8 text-zinc-900">
+
       <div className="mx-auto max-w-7xl">
 
         {/* =====================================================
@@ -127,7 +132,7 @@ export default async function DashboardPage() {
           </h1>
 
           <p className="mt-2 text-zinc-500">
-            Central Kitchen, Inventory, Purchasing & Outlet Management
+            Inventory, Central Kitchen, Purchasing & Outlet Operations
           </p>
 
         </div>
@@ -143,50 +148,60 @@ export default async function DashboardPage() {
         )}
 
         {/* =====================================================
-            USER INFO
+            USER INFORMATION
         ===================================================== */}
 
-        <div className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+        <div className="mb-10 rounded-2xl bg-white p-6 shadow-sm">
 
-          <p className="text-sm text-zinc-500">
-            Welcome
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-4">
 
-          <h2 className="mt-1 text-2xl font-bold">
-            {profile?.full_name || user.email}
-          </h2>
+            <div>
 
-          <p className="mt-1 text-sm text-zinc-500">
-            {profile?.email || user.email}
-          </p>
+              <p className="text-sm text-zinc-500">
+                Welcome
+              </p>
 
-          <div className="mt-4 flex flex-wrap gap-3">
+              <h2 className="mt-1 text-2xl font-bold">
+                {profile?.full_name || user.email}
+              </h2>
 
-            <span className="rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-800">
-              {roleName}
-            </span>
+              <p className="mt-1 text-sm text-zinc-500">
+                {profile?.email || user.email}
+              </p>
 
-            <span className="rounded-full bg-zinc-100 px-4 py-2 text-sm text-zinc-600">
-              {outletName}
-            </span>
+            </div>
 
-            {roleCode && (
-              <span className="rounded-full bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-500">
-                {roleCode}
+            <div className="flex flex-wrap gap-3">
+
+              <span className="rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-800">
+                {roleName}
               </span>
-            )}
+
+              <span className="rounded-full bg-zinc-100 px-4 py-2 text-sm text-zinc-600">
+                {outletCode
+                  ? `${outletCode} - ${outletName}`
+                  : outletName}
+              </span>
+
+              {roleCode && (
+                <span className="rounded-full bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-500">
+                  {roleCode}
+                </span>
+              )}
+
+            </div>
 
           </div>
 
         </div>
 
         {/* =====================================================
-            OPERATION MENU
+            OPERATIONS
         ===================================================== */}
 
         <div className="mb-5">
 
-          <h2 className="text-xl font-bold">
+          <h2 className="text-2xl font-bold">
             Operations
           </h2>
 
@@ -213,7 +228,7 @@ export default async function DashboardPage() {
               Inventory
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Current Stock, Movement & Monitoring
             </p>
 
@@ -222,7 +237,6 @@ export default async function DashboardPage() {
             </p>
 
           </Link>
-
 
           {/* CENTRAL KITCHEN */}
 
@@ -239,7 +253,7 @@ export default async function DashboardPage() {
               Central Kitchen
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Production, WIP & Finished Goods
             </p>
 
@@ -249,6 +263,30 @@ export default async function DashboardPage() {
 
           </Link>
 
+          {/* PURCHASING */}
+
+          <Link
+            href="/dashboard/purchasing"
+            className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+
+            <div className="text-3xl">
+              🛒
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold">
+              Purchasing
+            </h3>
+
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
+              Purchase Order, Receiving & Purchase Monitoring
+            </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Open Purchasing →
+            </p>
+
+          </Link>
 
           {/* RECEIVING */}
 
@@ -265,38 +303,115 @@ export default async function DashboardPage() {
               Receiving
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Supplier Goods Receiving & Stock In
             </p>
 
             <p className="mt-5 text-sm font-semibold text-red-800">
-              Open Receiving →
+              Receiving History →
             </p>
 
           </Link>
 
+          {/* WASTE */}
 
-          {/* PURCHASING */}
-
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <Link
+            href="/dashboard/inventory/waste"
+            className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
 
             <div className="text-3xl">
-              🛒
+              🗑️
             </div>
 
             <h3 className="mt-4 text-lg font-bold">
-              Purchasing
+              Waste Management
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
-              Purchase Order & Supplier Purchasing
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
+              Waste, Spoilage & Inventory Loss
             </p>
 
-            <span className="mt-5 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-              Next Module
-            </span>
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Open Waste →
+            </p>
 
-          </div>
+          </Link>
+
+          {/* STOCK TRANSFER */}
+
+          <Link
+            href="/dashboard/inventory/transfers"
+            className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+
+            <div className="text-3xl">
+              🔄
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold">
+              Stock Transfer
+            </h3>
+
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
+              Transfer Stock Between Locations
+            </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Open Transfers →
+            </p>
+
+          </Link>
+
+          {/* STOCK OPNAME */}
+
+          <Link
+            href="/dashboard/inventory/opname"
+            className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+
+            <div className="text-3xl">
+              📋
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold">
+              Stock Opname
+            </h3>
+
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
+              Physical Count & Stock Adjustment
+            </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Open Stock Opname →
+            </p>
+
+          </Link>
+
+          {/* INVENTORY VALUATION */}
+
+          <Link
+            href="/dashboard/inventory/valuation"
+            className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+
+            <div className="text-3xl">
+              💰
+            </div>
+
+            <h3 className="mt-4 text-lg font-bold">
+              Inventory Valuation
+            </h3>
+
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
+              Weighted Average Cost & Stock Value
+            </p>
+
+            <p className="mt-5 text-sm font-semibold text-red-800">
+              Open Valuation →
+            </p>
+
+          </Link>
 
         </div>
 
@@ -304,9 +419,9 @@ export default async function DashboardPage() {
             MASTER DATA
         ===================================================== */}
 
-        <div className="mb-5 mt-10">
+        <div className="mb-5 mt-12">
 
-          <h2 className="text-xl font-bold">
+          <h2 className="text-2xl font-bold">
             Master Data
           </h2>
 
@@ -333,7 +448,7 @@ export default async function DashboardPage() {
               Master Item
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Raw Material, WIP & Finished Goods
             </p>
 
@@ -342,7 +457,6 @@ export default async function DashboardPage() {
             </p>
 
           </Link>
-
 
           {/* MASTER RECIPE */}
 
@@ -359,7 +473,7 @@ export default async function DashboardPage() {
               Master Recipe
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Recipe, BOM & Production Yield
             </p>
 
@@ -369,8 +483,7 @@ export default async function DashboardPage() {
 
           </Link>
 
-
-          {/* SUPPLIER */}
+          {/* SUPPLIERS */}
 
           <Link
             href="/dashboard/suppliers"
@@ -385,7 +498,7 @@ export default async function DashboardPage() {
               Suppliers
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Supplier Master Data
             </p>
 
@@ -395,8 +508,7 @@ export default async function DashboardPage() {
 
           </Link>
 
-
-          {/* OUTLETS */}
+          {/* MASTER OUTLET */}
 
           <Link
             href="/dashboard/outlets"
@@ -411,7 +523,7 @@ export default async function DashboardPage() {
               Master Outlet
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Central Kitchen & Outlet Management
             </p>
 
@@ -427,9 +539,9 @@ export default async function DashboardPage() {
             MANAGEMENT
         ===================================================== */}
 
-        <div className="mb-5 mt-10">
+        <div className="mb-5 mt-12">
 
-          <h2 className="text-xl font-bold">
+          <h2 className="text-2xl font-bold">
             Management
           </h2>
 
@@ -453,16 +565,15 @@ export default async function DashboardPage() {
               COGS & Costing
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
-              Recipe Cost, Food Cost & Inventory Valuation
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
+              Food Cost, Inventory Cost & COGS
             </p>
 
-            <span className="mt-5 inline-block rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-500">
-              Coming Soon
+            <span className="mt-5 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+              In Development
             </span>
 
           </div>
-
 
           {/* POS */}
 
@@ -476,7 +587,7 @@ export default async function DashboardPage() {
               POS
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Sales, Menu & Transactions
             </p>
 
@@ -486,8 +597,7 @@ export default async function DashboardPage() {
 
           </div>
 
-
-          {/* REPORT */}
+          {/* REPORTS */}
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
 
@@ -499,7 +609,7 @@ export default async function DashboardPage() {
               Reports
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               Operational & Management Reports
             </p>
 
@@ -508,7 +618,6 @@ export default async function DashboardPage() {
             </span>
 
           </div>
-
 
           {/* USERS */}
 
@@ -522,7 +631,7 @@ export default async function DashboardPage() {
               Users
             </h3>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-2 min-h-10 text-sm text-zinc-500">
               User, Role & Access Management
             </p>
 
@@ -535,6 +644,7 @@ export default async function DashboardPage() {
         </div>
 
       </div>
+
     </main>
   )
 }
