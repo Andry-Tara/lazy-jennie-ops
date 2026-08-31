@@ -17,6 +17,25 @@ export default async function PurchasingPage() {
     redirect('/login')
   }
 
+  const { data: permissionData } =
+    await supabase.rpc('get_my_permissions')
+
+  const purchasingPermission =
+    (permissionData || []).find(
+      (row: {
+        module_code: string
+        can_create: boolean
+        can_post: boolean
+      }) =>
+        row.module_code === 'PURCHASING'
+    )
+
+  const canCreatePurchaseOrder =
+    Boolean(
+      purchasingPermission?.can_create &&
+      purchasingPermission?.can_post
+    )
+
   // =====================================================
   // PURCHASE ORDERS
   // =====================================================
@@ -25,7 +44,7 @@ export default async function PurchasingPage() {
     data: purchaseOrders,
     error,
   } = await supabase
-    .from('purchase_orders')
+    .from('purchase_orders_secure')
     .select(`
       id,
       po_no,
@@ -47,7 +66,7 @@ export default async function PurchasingPage() {
   // =====================================================
 
   const { data: suppliers } = await supabase
-    .from('suppliers')
+    .from('suppliers_secure')
     .select(`
       id,
       code,
@@ -71,7 +90,7 @@ export default async function PurchasingPage() {
   // =====================================================
 
   const { data: poItems } = await supabase
-    .from('purchase_order_items')
+    .from('purchase_order_items_secure')
     .select(`
       purchase_order_id,
       base_qty,
@@ -315,12 +334,14 @@ export default async function PurchasingPage() {
               Receiving History
             </Link>
 
-            <Link
-              href="/dashboard/purchasing/new"
-              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-            >
-              + New Purchase Order
-            </Link>
+            {canCreatePurchaseOrder && (
+              <Link
+                href="/dashboard/purchasing/new"
+                className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+              >
+                + New Purchase Order
+              </Link>
+            )}
 
           </div>
 

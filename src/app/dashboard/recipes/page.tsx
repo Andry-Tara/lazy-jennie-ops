@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 export default async function RecipesPage() {
   const supabase = await createClient()
 
@@ -17,6 +26,24 @@ export default async function RecipesPage() {
     redirect('/login')
   }
 
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const recipePermission = permissions.find(
+    (row) => row.module_code === 'MASTER_RECIPE'
+  )
+
+  const canCreateRecipe = Boolean(
+    recipePermission?.can_create
+  )
+
+  const canUpdateRecipe = Boolean(
+    recipePermission?.can_update
+  )
+
   // =====================================================
   // RECIPES
   // =====================================================
@@ -25,7 +52,7 @@ export default async function RecipesPage() {
     data: recipes,
     error,
   } = await supabase
-    .from('recipes')
+    .from('recipes_secure')
     .select(`
       id,
       code,
@@ -69,7 +96,7 @@ export default async function RecipesPage() {
   // =====================================================
 
   const { data: recipeItems } = await supabase
-    .from('recipe_items')
+    .from('recipe_items_secure')
     .select(`
       recipe_id,
       ingredient_item_id
@@ -216,12 +243,14 @@ export default async function RecipesPage() {
               Master Item
             </Link>
 
-            <Link
-              href="/dashboard/recipes/new"
-              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-            >
-              + New Recipe
-            </Link>
+            {canCreateRecipe && (
+              <Link
+                href="/dashboard/recipes/new"
+                className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+              >
+                + New Recipe
+              </Link>
+            )}
 
           </div>
 
@@ -492,12 +521,18 @@ export default async function RecipesPage() {
 
                         <td className="px-6 py-4">
 
-                          <Link
-                            href={`/dashboard/recipes/${recipe.id}/edit`}
-                            className="inline-flex rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-100"
-                          >
-                            Edit
-                          </Link>
+                          {canUpdateRecipe ? (
+                            <Link
+                              href={`/dashboard/recipes/${recipe.id}/edit`}
+                              className="inline-flex rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-100"
+                            >
+                              Edit
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-zinc-400">
+                              View only
+                            </span>
+                          )}
 
                         </td>
 
@@ -529,12 +564,14 @@ export default async function RecipesPage() {
                   Create your first production recipe.
                 </p>
 
-                <Link
-                  href="/dashboard/recipes/new"
-                  className="mt-5 inline-block rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-                >
-                  + New Recipe
-                </Link>
+                {canCreateRecipe && (
+                  <Link
+                    href="/dashboard/recipes/new"
+                    className="mt-5 inline-block rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+                  >
+                    + New Recipe
+                  </Link>
+                )}
 
               </div>
 

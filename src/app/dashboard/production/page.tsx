@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 export default async function ProductionPage() {
   const supabase = await createClient()
 
@@ -13,11 +22,41 @@ export default async function ProductionPage() {
     redirect('/login')
   }
 
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const productionPermission = permissions.find(
+    (row) => row.module_code === 'PRODUCTION'
+  )
+
+  const canCreateProduction = Boolean(
+    productionPermission?.can_create &&
+      productionPermission?.can_post
+  )
+
+  const canViewCost = permissions.some(
+    (row) =>
+      row.can_view === true &&
+      [
+        'INVENTORY_VALUATION',
+        'COSTING',
+      ].includes(row.module_code)
+  )
+
+  const canViewRecipes = permissions.some(
+    (row) =>
+      row.module_code === 'MASTER_RECIPE' &&
+      row.can_view === true
+  )
+
   const {
     data: productions,
     error,
   } = await supabase
-    .from('production_runs')
+    .from('production_runs_secure')
     .select(`
       id,
       production_no,
@@ -49,7 +88,7 @@ export default async function ProductionPage() {
     `)
 
   const { data: recipes } = await supabase
-    .from('recipes')
+    .from('recipes_secure')
     .select(`
       id,
       code,
@@ -72,7 +111,7 @@ export default async function ProductionPage() {
     `)
 
   const { data: productionItems } = await supabase
-    .from('production_run_items')
+    .from('production_run_items_secure')
     .select(`
       production_id
     `)
@@ -181,24 +220,34 @@ export default async function ProductionPage() {
 
           <div className="flex flex-wrap gap-3">
 
-            <Link
-              href="/dashboard/recipes"
-              className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
-            >
-              Master Recipe
-            </Link>
+            {canViewRecipes && (
+              <Link
+                href="/dashboard/recipes"
+                className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
+              >
+                Master Recipe
+              </Link>
+            )}
 
-            <Link
-              href="/dashboard/production/new"
-              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-            >
-              + New Production
-            </Link>
+            {canCreateProduction && (
+              <Link
+                href="/dashboard/production/new"
+                className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+              >
+                + New Production
+              </Link>
+            )}
 
           </div>
         </div>
 
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
+        <div
+          className={`mb-8 grid gap-4 ${
+            canViewCost
+              ? 'md:grid-cols-3'
+              : 'md:grid-cols-2'
+          }`}
+        >
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <p className="text-sm text-zinc-500">
@@ -220,17 +269,19 @@ export default async function ProductionPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-zinc-500">
-              Production Value
-            </p>
+          {canViewCost && (
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
+              <p className="text-sm text-zinc-500">
+                Production Value
+              </p>
 
-            <p className="mt-2 text-2xl font-bold">
-              {formatRupiah(
-                totalProductionValue
-              )}
-            </p>
-          </div>
+              <p className="mt-2 text-2xl font-bold">
+                {formatRupiah(
+                  totalProductionValue
+                )}
+              </p>
+            </div>
+          )}
 
         </div>
 
@@ -286,9 +337,11 @@ export default async function ProductionPage() {
                     Ingredients
                   </th>
 
-                  <th className="px-5 py-4 text-right">
-                    Cost
-                  </th>
+                  {canViewCost && (
+                    <th className="px-5 py-4 text-right">
+                      Cost
+                    </th>
+                  )}
 
                   <th className="px-5 py-4">
                     Status
@@ -381,21 +434,23 @@ export default async function ProductionPage() {
                           }
                         </td>
 
-                        <td className="px-5 py-4 text-right">
+                        {canViewCost && (
+                          <td className="px-5 py-4 text-right">
 
-                          <p className="font-semibold">
-                            {formatRupiah(
-                              production.total_input_cost
-                            )}
-                          </p>
+                            <p className="font-semibold">
+                              {formatRupiah(
+                                production.total_input_cost
+                              )}
+                            </p>
 
-                          <p className="text-xs text-zinc-400">
-                            {formatRupiah(
-                              production.output_unit_cost
-                            )} / base
-                          </p>
+                            <p className="text-xs text-zinc-400">
+                              {formatRupiah(
+                                production.output_unit_cost
+                              )} / base
+                            </p>
 
-                        </td>
+                          </td>
+                        )}
 
                         <td className="px-5 py-4">
                           <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">

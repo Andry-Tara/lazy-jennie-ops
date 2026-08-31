@@ -3,39 +3,75 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 
-export default function NewSupplierPage() {
+export default async function NewSupplierPage() {
+  const pageSupabase = await createClient()
+
+  const {
+    data: { user },
+  } = await pageSupabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const { data: permissionData } =
+    await pageSupabase.rpc('get_my_permissions')
+
+  const supplierPermission =
+    (permissionData || []).find(
+      (row: {
+        module_code: string
+        can_create: boolean
+      }) =>
+        row.module_code === 'SUPPLIERS'
+    )
+
+  if (!supplierPermission?.can_create) {
+    redirect('/dashboard?denied=SUPPLIERS')
+  }
 
   async function createSupplier(formData: FormData) {
     'use server'
 
     const supabase = await createClient()
 
-    const { error } = await supabase
-      .from('suppliers')
-      .insert({
-        code: String(formData.get('code') || '')
-          .trim()
-          .toUpperCase(),
+    const { error } = await supabase.rpc(
+      'create_supplier_secure',
+      {
+        p_code:
+          String(formData.get('code') || '')
+            .trim()
+            .toUpperCase(),
 
-        name: String(formData.get('name') || '').trim(),
+        p_name:
+          String(formData.get('name') || '')
+            .trim(),
 
-        contact_person:
-          String(formData.get('contact_person') || '').trim() || null,
+        p_contact_person:
+          String(formData.get('contact_person') || '')
+            .trim() || null,
 
-        phone:
-          String(formData.get('phone') || '').trim() || null,
+        p_phone:
+          String(formData.get('phone') || '')
+            .trim() || null,
 
-        email:
-          String(formData.get('email') || '').trim() || null,
+        p_email:
+          String(formData.get('email') || '')
+            .trim() || null,
 
-        address:
-          String(formData.get('address') || '').trim() || null,
+        p_address:
+          String(formData.get('address') || '')
+            .trim() || null,
 
-        payment_terms_days:
-          Number(formData.get('payment_terms_days') || 0),
+        p_payment_terms_days:
+          Number(
+            formData.get('payment_terms_days') || 0
+          ),
 
-        is_active: true,
-      })
+        p_is_active:
+          true,
+      }
+    )
 
     if (error) {
       throw new Error(error.message)

@@ -3,6 +3,15 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import EditRecipeForm from './EditRecipeForm'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 type PageProps = {
   params: Promise<{
     id: string
@@ -24,11 +33,25 @@ export default async function EditRecipePage({
     redirect('/login')
   }
 
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const recipePermission = permissions.find(
+    (row) => row.module_code === 'MASTER_RECIPE'
+  )
+
+  if (!recipePermission?.can_update) {
+    redirect('/dashboard?denied=MASTER_RECIPE')
+  }
+
   const {
     data: recipe,
     error: recipeError,
   } = await supabase
-    .from('recipes')
+    .from('recipes_secure')
     .select(`
       id,
       code,
@@ -52,7 +75,7 @@ export default async function EditRecipePage({
   const {
     data: recipeItems,
   } = await supabase
-    .from('recipe_items')
+    .from('recipe_items_secure')
     .select(`
       id,
       ingredient_item_id,

@@ -3,6 +3,15 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import RecipeForm from './RecipeForm'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 export default async function NewRecipePage() {
   const supabase = await createClient()
 
@@ -12,6 +21,20 @@ export default async function NewRecipePage() {
 
   if (!user) {
     redirect('/login')
+  }
+
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const recipePermission = permissions.find(
+    (row) => row.module_code === 'MASTER_RECIPE'
+  )
+
+  if (!recipePermission?.can_create) {
+    redirect('/dashboard?denied=MASTER_RECIPE')
   }
 
 

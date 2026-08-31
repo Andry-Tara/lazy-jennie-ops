@@ -14,6 +14,26 @@ export default async function NewPurchaseOrderPage() {
     redirect('/login')
   }
 
+  const { data: permissionData } =
+    await supabase.rpc('get_my_permissions')
+
+  const purchasingPermission =
+    (permissionData || []).find(
+      (row: {
+        module_code: string
+        can_create: boolean
+        can_post: boolean
+      }) =>
+        row.module_code === 'PURCHASING'
+    )
+
+  if (
+    !purchasingPermission?.can_create ||
+    !purchasingPermission?.can_post
+  ) {
+    redirect('/dashboard?denied=PURCHASING')
+  }
+
   const { data: outlets } = await supabase
     .from('outlets')
     .select(`
@@ -26,7 +46,7 @@ export default async function NewPurchaseOrderPage() {
     .order('name')
 
   const { data: suppliers } = await supabase
-    .from('suppliers')
+    .from('suppliers_secure')
     .select(`
       id,
       code,

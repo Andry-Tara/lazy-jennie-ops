@@ -31,7 +31,7 @@ export default async function PurchaseOrderDetailPage({
     data: po,
     error,
   } = await supabase
-    .from('purchase_orders')
+    .from('purchase_orders_secure')
     .select(`
       id,
       po_no,
@@ -57,7 +57,7 @@ export default async function PurchaseOrderDetailPage({
   // =====================================================
 
   const { data: poItems } = await supabase
-    .from('purchase_order_items')
+    .from('purchase_order_items_secure')
     .select(`
       id,
       purchase_order_id,
@@ -80,7 +80,7 @@ export default async function PurchaseOrderDetailPage({
   // =====================================================
 
   const { data: supplier } = await supabase
-    .from('suppliers')
+    .from('suppliers_secure')
     .select(`
       id,
       code,
@@ -174,7 +174,7 @@ export default async function PurchaseOrderDetailPage({
   // =====================================================
 
   const { data: receivings } = await supabase
-    .from('purchase_receivings')
+    .from('purchase_receivings_secure')
     .select(`
       id,
       receiving_no,

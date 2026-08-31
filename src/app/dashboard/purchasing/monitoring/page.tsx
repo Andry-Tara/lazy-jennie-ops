@@ -18,7 +18,7 @@ export default async function PurchaseMonitoringPage() {
   // =====================================================
 
   const { data: purchaseOrders } = await supabase
-    .from('purchase_orders')
+    .from('purchase_orders_secure')
     .select(`
       id,
       po_no,
@@ -39,7 +39,7 @@ export default async function PurchaseMonitoringPage() {
   // =====================================================
 
   const { data: poItems } = await supabase
-    .from('purchase_order_items')
+    .from('purchase_order_items_secure')
     .select(`
       purchase_order_id,
       order_qty,
@@ -55,7 +55,7 @@ export default async function PurchaseMonitoringPage() {
   // =====================================================
 
   const { data: suppliers } = await supabase
-    .from('suppliers')
+    .from('suppliers_secure')
     .select(`
       id,
       code,

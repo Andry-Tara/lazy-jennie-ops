@@ -13,8 +13,25 @@ export default async function SuppliersPage() {
     redirect('/login')
   }
 
+  const { data: permissionData } =
+    await supabase.rpc('get_my_permissions')
+
+  const supplierPermission =
+    (permissionData || []).find(
+      (row: {
+        module_code: string
+        can_create: boolean
+      }) =>
+        row.module_code === 'SUPPLIERS'
+    )
+
+  const canCreateSupplier =
+    Boolean(
+      supplierPermission?.can_create
+    )
+
   const { data: suppliers } = await supabase
-    .from('suppliers')
+    .from('suppliers_secure')
     .select('*')
     .order('name')
 
@@ -44,12 +61,14 @@ export default async function SuppliersPage() {
             </p>
           </div>
 
-          <Link
-            href="/dashboard/suppliers/new"
-            className="rounded-xl bg-red-900 px-5 py-3 font-semibold text-white"
-          >
-            + Add Supplier
-          </Link>
+          {canCreateSupplier && (
+            <Link
+              href="/dashboard/suppliers/new"
+              className="rounded-xl bg-red-900 px-5 py-3 font-semibold text-white"
+            >
+              + Add Supplier
+            </Link>
+          )}
         </div>
 
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">

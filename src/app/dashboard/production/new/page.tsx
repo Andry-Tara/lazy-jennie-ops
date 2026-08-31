@@ -3,6 +3,15 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ProductionForm from './ProductionForm'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 export default async function NewProductionPage() {
   const supabase = await createClient()
 
@@ -12,6 +21,25 @@ export default async function NewProductionPage() {
 
   if (!user) {
     redirect('/login')
+  }
+
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const productionPermission = permissions.find(
+    (row) => row.module_code === 'PRODUCTION'
+  )
+
+  const canPostProduction = Boolean(
+    productionPermission?.can_create &&
+      productionPermission?.can_post
+  )
+
+  if (!canPostProduction) {
+    redirect('/dashboard?denied=PRODUCTION')
   }
 
   const { data: outlets } = await supabase
@@ -27,7 +55,7 @@ export default async function NewProductionPage() {
     .order('name')
 
   const { data: recipes } = await supabase
-    .from('recipes')
+    .from('recipes_secure')
     .select(`
       id,
       code,
@@ -40,7 +68,7 @@ export default async function NewProductionPage() {
     .order('name')
 
   const { data: recipeItems } = await supabase
-    .from('recipe_items')
+    .from('recipe_items_secure')
     .select(`
       recipe_id,
       ingredient_item_id,

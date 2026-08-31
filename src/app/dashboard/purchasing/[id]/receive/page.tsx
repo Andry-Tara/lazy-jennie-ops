@@ -24,6 +24,26 @@ export default async function ReceivePurchaseOrderPage({
     redirect('/login')
   }
 
+  const { data: permissionData } =
+    await supabase.rpc('get_my_permissions')
+
+  const receivingPermission =
+    (permissionData || []).find(
+      (row: {
+        module_code: string
+        can_create: boolean
+        can_post: boolean
+      }) =>
+        row.module_code === 'RECEIVING'
+    )
+
+  if (
+    !receivingPermission?.can_create ||
+    !receivingPermission?.can_post
+  ) {
+    redirect('/dashboard?denied=RECEIVING')
+  }
+
   // =====================================================
   // PURCHASE ORDER
   // =====================================================
@@ -32,7 +52,7 @@ export default async function ReceivePurchaseOrderPage({
     data: purchaseOrder,
     error: poError,
   } = await supabase
-    .from('purchase_orders')
+    .from('purchase_orders_secure')
     .select(`
       id,
       po_no,
@@ -56,7 +76,7 @@ export default async function ReceivePurchaseOrderPage({
   // =====================================================
 
   const { data: poItems } = await supabase
-    .from('purchase_order_items')
+    .from('purchase_order_items_secure')
     .select(`
       id,
       purchase_order_id,
@@ -79,7 +99,7 @@ export default async function ReceivePurchaseOrderPage({
   // =====================================================
 
   const { data: supplier } = await supabase
-    .from('suppliers')
+    .from('suppliers_secure')
     .select(`
       id,
       code,
