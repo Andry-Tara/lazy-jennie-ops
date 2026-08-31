@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 export default async function ItemsPage() {
   const supabase = await createClient()
 
@@ -13,11 +22,35 @@ export default async function ItemsPage() {
     redirect('/login')
   }
 
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const masterItemPermission = permissions.find(
+    (row) => row.module_code === 'MASTER_ITEM'
+  )
+
+  const canCreate = Boolean(
+    masterItemPermission?.can_create
+  )
+
+  const canViewCost = permissions.some(
+    (row) =>
+      row.can_view === true &&
+      [
+        'PURCHASING',
+        'INVENTORY_VALUATION',
+        'COSTING',
+      ].includes(row.module_code)
+  )
+
   const {
     data: items,
     error,
   } = await supabase
-    .from('items')
+    .from('items_secure')
     .select(`
       id,
       sku,
@@ -40,7 +73,7 @@ export default async function ItemsPage() {
     .order('name')
 
   const { data: categories } = await supabase
-    .from('item_categories')
+    .from('item_categories_secure')
     .select(`
       id,
       code,
@@ -48,7 +81,7 @@ export default async function ItemsPage() {
     `)
 
   const { data: units } = await supabase
-    .from('units')
+    .from('units_secure')
     .select(`
       id,
       code,
@@ -164,12 +197,14 @@ export default async function ItemsPage() {
             </p>
           </div>
 
-          <Link
-            href="/dashboard/items/new"
-            className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-          >
-            + Add Item
-          </Link>
+          {canCreate && (
+            <Link
+              href="/dashboard/items/new"
+              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+            >
+              + Add Item
+            </Link>
+          )}
 
         </div>
 
@@ -269,9 +304,11 @@ export default async function ItemsPage() {
                     Min Stock
                   </th>
 
-                  <th className="px-5 py-4 text-right">
-                    Last Cost
-                  </th>
+                  {canViewCost && (
+                    <th className="px-5 py-4 text-right">
+                      Last Cost
+                    </th>
+                  )}
 
                   <th className="px-5 py-4">
                     Status
@@ -364,11 +401,13 @@ export default async function ItemsPage() {
                         )}
                       </td>
 
-                      <td className="px-5 py-4 text-right font-semibold">
-                        {formatRupiah(
-                          item.last_cost
-                        )}
-                      </td>
+                      {canViewCost && (
+                        <td className="px-5 py-4 text-right font-semibold">
+                          {formatRupiah(
+                            item.last_cost
+                          )}
+                        </td>
+                      )}
 
                       <td className="px-5 py-4">
 

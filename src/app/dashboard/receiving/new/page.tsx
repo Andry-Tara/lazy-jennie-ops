@@ -47,7 +47,7 @@ export default async function NewReceivingPage() {
     .order('name')
 
   const { data: items } = await supabase
-    .from('items')
+    .from('items_secure')
     .select(`
       id,
       sku,
@@ -60,7 +60,7 @@ export default async function NewReceivingPage() {
     .order('name')
 
   const { data: units } = await supabase
-    .from('units')
+    .from('units_secure')
     .select('id, code, name, symbol')
     .eq('is_active', true)
     .order('name')

@@ -79,7 +79,7 @@ export default async function NewProductionPage() {
     `)
 
   const { data: items } = await supabase
-    .from('items')
+    .from('items_secure')
     .select(`
       id,
       sku,
@@ -90,7 +90,7 @@ export default async function NewProductionPage() {
     .eq('is_active', true)
 
   const { data: units } = await supabase
-    .from('units')
+    .from('units_secure')
     .select(`
       id,
       code,

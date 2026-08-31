@@ -127,7 +127,7 @@ export default async function PurchaseOrderDetailPage({
 
   if (itemIds.length > 0) {
     const { data } = await supabase
-      .from('items')
+      .from('items_secure')
       .select(`
         id,
         sku,
@@ -158,7 +158,7 @@ export default async function PurchaseOrderDetailPage({
 
   if (unitIds.length > 0) {
     const { data } = await supabase
-      .from('units')
+      .from('units_secure')
       .select(`
         id,
         code,

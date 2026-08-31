@@ -71,7 +71,7 @@ export default async function RecipesPage() {
   // =====================================================
 
   const { data: items } = await supabase
-    .from('items')
+    .from('items_secure')
     .select(`
       id,
       sku,
@@ -84,7 +84,7 @@ export default async function RecipesPage() {
   // =====================================================
 
   const { data: units } = await supabase
-    .from('units')
+    .from('units_secure')
     .select(`
       id,
       code,

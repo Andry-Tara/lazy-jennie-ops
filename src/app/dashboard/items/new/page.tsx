@@ -7,6 +7,15 @@ type SearchParams = Promise<{
   error?: string
 }>
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 export default async function NewItemPage({
   searchParams,
 }: {
@@ -24,8 +33,32 @@ export default async function NewItemPage({
     redirect('/login')
   }
 
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const masterItemPermission = permissions.find(
+    (row) => row.module_code === 'MASTER_ITEM'
+  )
+
+  if (!masterItemPermission?.can_create) {
+    redirect('/dashboard/items?denied=CREATE')
+  }
+
+  const canViewCost = permissions.some(
+    (row) =>
+      row.can_view === true &&
+      [
+        'PURCHASING',
+        'INVENTORY_VALUATION',
+        'COSTING',
+      ].includes(row.module_code)
+  )
+
   const { data: categories } = await supabase
-    .from('item_categories')
+    .from('item_categories_secure')
     .select(`
       id,
       code,
@@ -35,7 +68,7 @@ export default async function NewItemPage({
     .order('name')
 
   const { data: units } = await supabase
-    .from('units')
+    .from('units_secure')
     .select(`
       id,
       code,
@@ -170,50 +203,55 @@ export default async function NewItemPage({
       )
     }
 
-    const { error } = await supabase
-      .from('items')
-      .insert({
-        sku,
-        name,
-        category_id:
+    const { error } = await supabase.rpc(
+      'create_item_secure',
+      {
+        p_sku:
+          sku,
+
+        p_name:
+          name,
+
+        p_category_id:
           categoryId,
 
-        item_type:
+        p_item_type:
           itemType,
 
-        base_unit_id:
+        p_base_unit_id:
           baseUnitId,
 
-        purchase_unit_id:
+        p_purchase_unit_id:
           purchaseUnitRaw || null,
 
-        minimum_stock:
+        p_minimum_stock:
           minimumStock,
 
-        reorder_qty:
+        p_reorder_qty:
           reorderQty,
 
-        standard_cost:
+        p_standard_cost:
           standardCost,
 
-        last_cost:
+        p_last_cost:
           standardCost,
 
-        is_purchasable:
+        p_is_purchasable:
           isPurchasable,
 
-        is_sellable:
+        p_is_sellable:
           isSellable,
 
-        track_batch:
+        p_track_batch:
           trackBatch,
 
-        track_expiry:
+        p_track_expiry:
           trackExpiry,
 
-        is_active:
+        p_is_active:
           true,
-      })
+      }
+    )
 
     if (error) {
       redirect(
@@ -469,24 +507,26 @@ export default async function NewItemPage({
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold">
-                  Standard Cost / Base Unit
-                </label>
+              {canViewCost && (
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-semibold">
+                    Standard Cost / Base Unit
+                  </label>
 
-                <input
-                  name="standard_cost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  defaultValue="0"
-                  className="w-full rounded-xl border border-zinc-300 px-4 py-3"
-                />
+                  <input
+                    name="standard_cost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue="0"
+                    className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+                  />
 
-                <p className="mt-2 text-xs text-zinc-400">
-                  For WIP, production will later calculate the actual output cost automatically.
-                </p>
-              </div>
+                  <p className="mt-2 text-xs text-zinc-400">
+                    For WIP, production will later calculate the actual output cost automatically.
+                  </p>
+                </div>
+              )}
 
             </div>
           </div>

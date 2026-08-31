@@ -26,7 +26,7 @@ export default async function NewMenuPage() {
     data: items,
     error: itemError,
   } = await supabase
-    .from('items')
+    .from('items_secure')
     .select(`
       id,
       sku,
@@ -45,7 +45,7 @@ export default async function NewMenuPage() {
     data: units,
     error: unitError,
   } = await supabase
-    .from('units')
+    .from('units_secure')
     .select(`
       id,
       code,
