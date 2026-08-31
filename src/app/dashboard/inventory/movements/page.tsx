@@ -2,170 +2,354 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-type Props = {
-  searchParams: Promise<{
-    outlet?: string
-    item?: string
-    type?: string
-  }>
-}
+type SearchParams = Promise<{
+  from?: string
+  to?: string
+  outlet?: string
+  type?: string
+}>
 
-type Movement = {
-  id: string
-  transaction_no: string
-  transaction_date: string
-  transaction_type: string
-  source_qty: number
-  quantity_base: number
-  unit_cost: number
-  total_cost: number
-  reference_no: string | null
-  batch_no: string | null
-  outlets: {
-    id: string
-    code: string
-    name: string
-  } | null
-  items: {
-    id: string
-    sku: string
-    name: string
-  } | null
-  units: {
-    id: string
-    code: string
-    symbol: string
-  } | null
-}
-
-export default async function StockMovementsPage({
+export default async function StockMovementPage({
   searchParams,
-}: Props) {
-  const params = await searchParams
-  const supabase = await createClient()
+}: {
+  searchParams: SearchParams
+}) {
+  const params =
+    await searchParams
+
+  const supabase =
+    await createClient()
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } =
+    await supabase.auth.getUser()
 
   if (!user) {
     redirect('/login')
   }
 
-  const { data: outlets } = await supabase
-    .from('outlets')
-    .select('id, code, name')
-    .eq('is_active', true)
-    .order('name')
+  // =====================================================
+  // DATE
+  // =====================================================
 
-  const { data: items } = await supabase
-    .from('items')
-    .select('id, sku, name')
-    .eq('is_active', true)
-    .order('name')
+  const today =
+    new Intl.DateTimeFormat(
+      'en-CA',
+      {
+        timeZone:
+          'Asia/Jakarta',
 
-  let query = supabase
-    .from('stock_transactions')
-    .select(`
-      id,
-      transaction_no,
-      transaction_date,
-      transaction_type,
-      source_qty,
-      quantity_base,
-      unit_cost,
-      total_cost,
-      reference_no,
-      batch_no,
-      outlets (
-        id,
-        code,
-        name
-      ),
-      items (
-        id,
-        sku,
-        name
-      ),
-      units:source_unit_id (
-        id,
-        code,
-        symbol
+        year:
+          'numeric',
+
+        month:
+          '2-digit',
+
+        day:
+          '2-digit',
+      }
+    ).format(
+      new Date()
+    )
+
+  const fromDate =
+    params.from ||
+    today
+
+  const toDate =
+    params.to ||
+    today
+
+  // =====================================================
+  // COST ACCESS
+  // =====================================================
+
+  const {
+    data: permissionData,
+  } =
+    await supabase.rpc(
+      'get_my_permissions'
+    )
+
+  const canViewCost =
+    (permissionData || []).some(
+      (row: {
+        module_code: string
+        can_view: boolean
+      }) =>
+        (
+          row.module_code ===
+            'INVENTORY_VALUATION' ||
+          row.module_code ===
+            'COSTING'
+        ) &&
+        row.can_view ===
+          true
+    )
+
+  // =====================================================
+  // VISIBLE LOCATIONS
+  // =====================================================
+
+  const {
+    data: locationRows,
+  } =
+    await supabase
+      .from(
+        'inventory_stock_secure'
       )
-    `)
-    .order('transaction_date', {
-      ascending: false,
-    })
-    .limit(500)
+      .select(`
+        outlet_id,
+        outlet_code,
+        outlet_name
+      `)
 
-  if (params.outlet) {
-    query = query.eq('outlet_id', params.outlet)
+  const outletMap =
+    new Map<
+      string,
+      {
+        id: string
+        code: string
+        name: string
+      }
+    >()
+
+  for (
+    const row of
+      locationRows || []
+  ) {
+    if (
+      !outletMap.has(
+        row.outlet_id
+      )
+    ) {
+      outletMap.set(
+        row.outlet_id,
+        {
+          id:
+            row.outlet_id,
+
+          code:
+            row.outlet_code,
+
+          name:
+            row.outlet_name,
+        }
+      )
+    }
   }
 
-  if (params.item) {
-    query = query.eq('item_id', params.item)
+  // =====================================================
+  // MOVEMENT
+  // =====================================================
+
+  let query =
+    supabase
+      .from(
+        'stock_transactions_secure'
+      )
+      .select(`
+        id,
+        transaction_no,
+        transaction_date,
+        outlet_id,
+        outlet_code,
+        outlet_name,
+        item_id,
+        item_sku,
+        item_name,
+        transaction_type,
+        source_qty,
+        source_unit_code,
+        quantity_base,
+        base_unit_code,
+        unit_cost,
+        total_cost,
+        batch_no,
+        expiry_date,
+        reference_type,
+        reference_no,
+        notes
+      `)
+      .gte(
+        'transaction_date',
+        `${fromDate}T00:00:00+07:00`
+      )
+      .lte(
+        'transaction_date',
+        `${toDate}T23:59:59.999+07:00`
+      )
+      .order(
+        'transaction_date',
+        {
+          ascending: false,
+        }
+      )
+
+  if (params.outlet) {
+    query =
+      query.eq(
+        'outlet_id',
+        params.outlet
+      )
   }
 
   if (params.type) {
-    query = query.eq('transaction_type', params.type)
+    query =
+      query.eq(
+        'transaction_type',
+        params.type
+      )
   }
 
-  const { data, error } = await query
+  const {
+    data: rows,
+    error,
+  } =
+    await query
 
-  const movements = (data || []) as unknown as Movement[]
+  const transactionTypes =
+    [
+      'OPENING_BALANCE',
+      'PURCHASE_RECEIVING',
+      'PRODUCTION_USAGE',
+      'PRODUCTION_OUTPUT',
+      'TRANSFER_OUT',
+      'TRANSFER_IN',
+      'POS_CONSUMPTION',
+      'WASTE',
+      'STOCK_ADJUSTMENT',
+      'STOCK_OPNAME',
+    ]
 
-  const stockIn = movements
-    .filter((row) => Number(row.quantity_base) > 0)
-    .reduce(
-      (total, row) => total + Number(row.quantity_base),
-      0
+  const stockIn =
+    (rows || [])
+      .filter(
+        (row) =>
+          Number(
+            row.quantity_base || 0
+          ) > 0
+      )
+      .reduce(
+        (total, row) =>
+          total +
+          Number(
+            row.quantity_base || 0
+          ),
+        0
+      )
+
+  const stockOut =
+    (rows || [])
+      .filter(
+        (row) =>
+          Number(
+            row.quantity_base || 0
+          ) < 0
+      )
+      .reduce(
+        (total, row) =>
+          total +
+          Math.abs(
+            Number(
+              row.quantity_base || 0
+            )
+          ),
+        0
+      )
+
+  const movementValue =
+    canViewCost
+      ? (rows || []).reduce(
+          (total, row) =>
+            total +
+            Number(
+              row.total_cost || 0
+            ),
+          0
+        )
+      : 0
+
+  function formatQty(
+    value:
+      number |
+      string |
+      null
+  ) {
+    return Number(
+      value || 0
+    ).toLocaleString(
+      'id-ID',
+      {
+        maximumFractionDigits:
+          4,
+      }
     )
+  }
 
-  const stockOut = movements
-    .filter((row) => Number(row.quantity_base) < 0)
-    .reduce(
-      (total, row) =>
-        total + Math.abs(Number(row.quantity_base)),
-      0
+  function formatRupiah(
+    value:
+      number |
+      string |
+      null
+  ) {
+    return new Intl.NumberFormat(
+      'id-ID',
+      {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+      }
+    ).format(
+      Number(
+        value || 0
+      )
     )
-
-  const netMovement = movements.reduce(
-    (total, row) =>
-      total + Number(row.quantity_base),
-    0
-  )
-
-  function formatNumber(value: number) {
-    return Number(value).toLocaleString('id-ID', {
-      maximumFractionDigits: 3,
-    })
   }
 
-  function formatRupiah(value: number) {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      maximumFractionDigits: 0,
-    }).format(Number(value))
-  }
+  function formatDateTime(
+    value:
+      string |
+      null
+  ) {
+    if (!value) {
+      return '-'
+    }
 
-  function formatDate(value: string) {
-    return new Intl.DateTimeFormat('id-ID', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'Asia/Jakarta',
-    }).format(new Date(value))
-  }
+    return new Intl.DateTimeFormat(
+      'id-ID',
+      {
+        timeZone:
+          'Asia/Jakarta',
 
-  function formatType(value: string) {
-    return value.replaceAll('_', ' ')
+        day:
+          '2-digit',
+
+        month:
+          'short',
+
+        year:
+          'numeric',
+
+        hour:
+          '2-digit',
+
+        minute:
+          '2-digit',
+      }
+    ).format(
+      new Date(value)
+    )
   }
 
   return (
     <main className="min-h-screen bg-zinc-100 p-8 text-zinc-900">
+
       <div className="mx-auto max-w-7xl">
 
         <div className="mb-8">
+
           <Link
             href="/dashboard/inventory"
             className="text-sm text-zinc-500 hover:text-red-800"
@@ -182,18 +366,145 @@ export default async function StockMovementsPage({
           </h1>
 
           <p className="mt-2 text-zinc-500">
-            Inventory Transaction Ledger
+            Inventory Ledger by Authorized Location
           </p>
+
         </div>
 
-        <div className="mb-8 grid gap-4 md:grid-cols-4">
+        {/* FILTER */}
+
+        <form
+          method="get"
+          className="mb-8 grid gap-4 rounded-2xl bg-white p-6 shadow-sm lg:grid-cols-5"
+        >
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold">
+              From
+            </label>
+
+            <input
+              type="date"
+              name="from"
+              defaultValue={
+                fromDate
+              }
+              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold">
+              To
+            </label>
+
+            <input
+              type="date"
+              name="to"
+              defaultValue={
+                toDate
+              }
+              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold">
+              Location
+            </label>
+
+            <select
+              name="outlet"
+              defaultValue={
+                params.outlet || ''
+              }
+              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+            >
+              <option value="">
+                All Authorized Locations
+              </option>
+
+              {Array.from(
+                outletMap.values()
+              ).map(
+                (outlet) => (
+                  <option
+                    key={
+                      outlet.id
+                    }
+                    value={
+                      outlet.id
+                    }
+                  >
+                    {outlet.code}
+                    {' - '}
+                    {outlet.name}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold">
+              Movement Type
+            </label>
+
+            <select
+              name="type"
+              defaultValue={
+                params.type || ''
+              }
+              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+            >
+
+              <option value="">
+                All Types
+              </option>
+
+              {transactionTypes.map(
+                (type) => (
+                  <option
+                    key={type}
+                    value={type}
+                  >
+                    {type}
+                  </option>
+                )
+              )}
+
+            </select>
+          </div>
+
+          <div className="flex items-end">
+
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-red-900 px-5 py-3 font-bold text-white"
+            >
+              Apply Filter
+            </button>
+
+          </div>
+
+        </form>
+
+        {/* SUMMARY */}
+
+        <div
+          className={`mb-8 grid gap-4 ${
+            canViewCost
+              ? 'md:grid-cols-4'
+              : 'md:grid-cols-3'
+          }`}
+        >
+
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <p className="text-sm text-zinc-500">
               Transactions
             </p>
-
             <p className="mt-2 text-3xl font-bold">
-              {movements.length}
+              {rows?.length || 0}
             </p>
           </div>
 
@@ -201,9 +512,8 @@ export default async function StockMovementsPage({
             <p className="text-sm text-zinc-500">
               Stock In
             </p>
-
-            <p className="mt-2 text-3xl font-bold text-green-700">
-              +{formatNumber(stockIn)}
+            <p className="mt-2 text-2xl font-bold text-green-700">
+              +{formatQty(stockIn)}
             </p>
           </div>
 
@@ -211,150 +521,31 @@ export default async function StockMovementsPage({
             <p className="text-sm text-zinc-500">
               Stock Out
             </p>
-
-            <p className="mt-2 text-3xl font-bold text-red-700">
-              -{formatNumber(stockOut)}
+            <p className="mt-2 text-2xl font-bold text-red-700">
+              -{formatQty(stockOut)}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-zinc-500">
-              Net Movement
-            </p>
+          {canViewCost && (
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
+              <p className="text-sm text-zinc-500">
+                Recorded Value
+              </p>
+              <p className="mt-2 text-xl font-bold">
+                {formatRupiah(
+                  movementValue
+                )}
+              </p>
+            </div>
+          )}
 
-            <p className="mt-2 text-3xl font-bold">
-              {netMovement > 0 ? '+' : ''}
-              {formatNumber(netMovement)}
-            </p>
-          </div>
         </div>
 
-        <form
-          method="get"
-          className="mb-6 grid gap-4 rounded-2xl bg-white p-5 shadow-sm md:grid-cols-4"
-        >
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase text-zinc-500">
-              Location
-            </label>
-
-            <select
-              name="outlet"
-              defaultValue={params.outlet || ''}
-              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
-            >
-              <option value="">
-                All Locations
-              </option>
-
-              {outlets?.map((outlet) => (
-                <option
-                  key={outlet.id}
-                  value={outlet.id}
-                >
-                  {outlet.code} - {outlet.name}
-                </option>
-              ))}
-            </select>
+        {!canViewCost && (
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+            Inventory cost and transaction value are restricted for this role.
           </div>
-
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase text-zinc-500">
-              Item
-            </label>
-
-            <select
-              name="item"
-              defaultValue={params.item || ''}
-              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
-            >
-              <option value="">
-                All Items
-              </option>
-
-              {items?.map((item) => (
-                <option
-                  key={item.id}
-                  value={item.id}
-                >
-                  {item.sku} - {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase text-zinc-500">
-              Transaction Type
-            </label>
-
-            <select
-              name="type"
-              defaultValue={params.type || ''}
-              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
-            >
-              <option value="">
-                All Transactions
-              </option>
-
-              <option value="OPENING_BALANCE">
-                Opening Balance
-              </option>
-
-              <option value="PURCHASE_RECEIVING">
-                Purchase Receiving
-              </option>
-
-              <option value="PRODUCTION_USAGE">
-                Production Usage
-              </option>
-
-              <option value="PRODUCTION_OUTPUT">
-                Production Output
-              </option>
-
-              <option value="TRANSFER_OUT">
-                Transfer Out
-              </option>
-
-              <option value="TRANSFER_IN">
-                Transfer In
-              </option>
-
-              <option value="POS_CONSUMPTION">
-                POS Consumption
-              </option>
-
-              <option value="WASTE">
-                Waste
-              </option>
-
-              <option value="STOCK_ADJUSTMENT">
-                Stock Adjustment
-              </option>
-
-              <option value="STOCK_OPNAME">
-                Stock Opname
-              </option>
-            </select>
-          </div>
-
-          <div className="flex items-end gap-2">
-            <button
-              type="submit"
-              className="flex-1 rounded-xl bg-red-900 px-4 py-3 font-semibold text-white"
-            >
-              Filter
-            </button>
-
-            <Link
-              href="/dashboard/inventory/movements"
-              className="rounded-xl border border-zinc-300 px-4 py-3 font-semibold"
-            >
-              Reset
-            </Link>
-          </div>
-        </form>
+        )}
 
         {error && (
           <div className="mb-6 rounded-xl bg-red-50 p-4 text-red-700">
@@ -362,188 +553,167 @@ export default async function StockMovementsPage({
           </div>
         )}
 
+        {/* TABLE */}
+
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-          <div className="border-b border-zinc-200 px-6 py-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="font-bold">
-                  Transaction History
-                </h2>
-
-                <p className="mt-1 text-sm text-zinc-500">
-                  Latest 500 transactions
-                </p>
-              </div>
-
-              <Link
-                href="/dashboard/receiving/new"
-                className="rounded-xl bg-red-900 px-5 py-2.5 text-sm font-semibold text-white"
-              >
-                + Receiving
-              </Link>
-            </div>
-          </div>
 
           <div className="overflow-x-auto">
+
             <table className="w-full text-left text-sm">
+
               <thead className="bg-zinc-50 text-zinc-500">
+
                 <tr>
-                  <th className="px-5 py-4">
-                    Date
+                  <th className="px-4 py-4">
+                    Date / No
                   </th>
-
-                  <th className="px-5 py-4">
-                    Transaction
-                  </th>
-
-                  <th className="px-5 py-4">
+                  <th className="px-4 py-4">
                     Location
                   </th>
-
-                  <th className="px-5 py-4">
+                  <th className="px-4 py-4">
                     Item
                   </th>
-
-                  <th className="px-5 py-4">
-                    Input
+                  <th className="px-4 py-4">
+                    Type
+                  </th>
+                  <th className="px-4 py-4 text-right">
+                    Qty
                   </th>
 
-                  <th className="px-5 py-4 text-right">
-                    Movement
-                  </th>
+                  {canViewCost && (
+                    <>
+                      <th className="px-4 py-4 text-right">
+                        Unit Cost
+                      </th>
+                      <th className="px-4 py-4 text-right">
+                        Value
+                      </th>
+                    </>
+                  )}
 
-                  <th className="px-5 py-4 text-right">
-                    Cost
-                  </th>
-
-                  <th className="px-5 py-4">
+                  <th className="px-4 py-4">
                     Reference
                   </th>
                 </tr>
+
               </thead>
 
               <tbody className="divide-y divide-zinc-100">
-                {movements.map((movement) => {
-                  const qty =
-                    Number(movement.quantity_base)
 
-                  const stockComingIn =
-                    qty > 0
+                {(rows || []).map(
+                  (row) => {
 
-                  return (
-                    <tr
-                      key={movement.id}
-                      className="hover:bg-zinc-50"
-                    >
-                      <td className="whitespace-nowrap px-5 py-4 text-zinc-500">
-                        {formatDate(
-                          movement.transaction_date
-                        )}
-                      </td>
+                    const qty =
+                      Number(
+                        row.quantity_base || 0
+                      )
 
-                      <td className="px-5 py-4">
-                        <p className="font-semibold">
-                          {formatType(
-                            movement.transaction_type
-                          )}
-                        </p>
+                    return (
+                      <tr key={row.id}>
 
-                        <p className="mt-1 text-xs text-zinc-400">
-                          {movement.transaction_no}
-                        </p>
-                      </td>
+                        <td className="px-4 py-4">
 
-                      <td className="px-5 py-4">
-                        <p className="font-medium">
-                          {movement.outlets?.name || '-'}
-                        </p>
-
-                        <p className="text-xs text-zinc-400">
-                          {movement.outlets?.code || ''}
-                        </p>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <p className="font-medium">
-                          {movement.items?.name || '-'}
-                        </p>
-
-                        <p className="text-xs text-zinc-400">
-                          {movement.items?.sku || ''}
-                        </p>
-                      </td>
-
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        {formatNumber(
-                          movement.source_qty
-                        )}{' '}
-                        {movement.units?.code || ''}
-                      </td>
-
-                      <td className="px-5 py-4 text-right">
-                        <span
-                          className={
-                            stockComingIn
-                              ? 'font-bold text-green-700'
-                              : 'font-bold text-red-700'
-                          }
-                        >
-                          {stockComingIn ? '+' : ''}
-                          {formatNumber(qty)}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4 text-right">
-                        <p className="font-medium">
-                          {formatRupiah(
-                            movement.total_cost
-                          )}
-                        </p>
-
-                        {Number(
-                          movement.unit_cost
-                        ) > 0 && (
-                          <p className="text-xs text-zinc-400">
-                            {formatRupiah(
-                              movement.unit_cost
-                            )} / base
+                          <p className="font-semibold">
+                            {formatDateTime(
+                              row.transaction_date
+                            )}
                           </p>
-                        )}
-                      </td>
 
-                      <td className="px-5 py-4">
-                        <p className="font-medium">
-                          {movement.reference_no ||
-                            movement.transaction_no}
-                        </p>
-
-                        {movement.batch_no && (
                           <p className="mt-1 text-xs text-zinc-400">
-                            Batch: {movement.batch_no}
+                            {row.transaction_no}
                           </p>
+
+                        </td>
+
+                        <td className="px-4 py-4">
+
+                          <p className="font-medium">
+                            {row.outlet_name}
+                          </p>
+
+                          <p className="text-xs text-zinc-400">
+                            {row.outlet_code}
+                          </p>
+
+                        </td>
+
+                        <td className="px-4 py-4">
+
+                          <p className="font-bold">
+                            {row.item_name}
+                          </p>
+
+                          <p className="text-xs text-zinc-400">
+                            {row.item_sku}
+                          </p>
+
+                        </td>
+
+                        <td className="px-4 py-4">
+                          {row.transaction_type}
+                        </td>
+
+                        <td
+                          className={`px-4 py-4 text-right font-bold ${
+                            qty >= 0
+                              ? 'text-green-700'
+                              : 'text-red-700'
+                          }`}
+                        >
+                          {qty > 0
+                            ? '+'
+                            : ''}
+                          {formatQty(qty)}
+                          {' '}
+                          {row.base_unit_code ||
+                            ''}
+                        </td>
+
+                        {canViewCost && (
+                          <>
+                            <td className="px-4 py-4 text-right">
+                              {formatRupiah(
+                                row.unit_cost
+                              )}
+                            </td>
+
+                            <td className="px-4 py-4 text-right font-semibold">
+                              {formatRupiah(
+                                row.total_cost
+                              )}
+                            </td>
+                          </>
                         )}
-                      </td>
-                    </tr>
-                  )
-                })}
+
+                        <td className="px-4 py-4">
+
+                          <p className="font-medium">
+                            {row.reference_no ||
+                              '-'}
+                          </p>
+
+                          <p className="text-xs text-zinc-400">
+                            {row.reference_type ||
+                              ''}
+                          </p>
+
+                        </td>
+
+                      </tr>
+                    )
+                  }
+                )}
+
               </tbody>
+
             </table>
 
-            {!movements.length && (
-              <div className="p-12 text-center">
-                <p className="font-semibold">
-                  No stock movement found
-                </p>
-
-                <p className="mt-1 text-sm text-zinc-500">
-                  No inventory transactions match this filter.
-                </p>
-              </div>
-            )}
           </div>
+
         </div>
 
       </div>
+
     </main>
   )
 }

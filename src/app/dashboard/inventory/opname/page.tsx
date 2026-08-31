@@ -3,91 +3,239 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function StockOpnamePage() {
-  const supabase = await createClient()
+  const supabase =
+    await createClient()
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } =
+    await supabase.auth.getUser()
 
   if (!user) {
     redirect('/login')
   }
 
+  // =====================================================
+  // PERMISSION
+  // =====================================================
+
+  const {
+    data: permissions,
+  } =
+    await supabase.rpc(
+      'get_my_permissions'
+    )
+
+  const opnamePermission =
+    (permissions || []).find(
+      (row: {
+        module_code: string
+        can_view: boolean
+        can_create: boolean
+        can_post: boolean
+      }) =>
+        row.module_code ===
+        'STOCK_OPNAME'
+    )
+
+  const canCreate =
+    Boolean(
+      opnamePermission?.can_create
+    )
+
+  const canViewCost =
+    (permissions || []).some(
+      (row: {
+        module_code: string
+        can_view: boolean
+      }) =>
+        (
+          row.module_code ===
+            'INVENTORY_VALUATION' ||
+          row.module_code ===
+            'COSTING'
+        ) &&
+        row.can_view
+    )
+
+  // =====================================================
+  // HEADER
+  // =====================================================
+
   const {
     data: opnames,
     error,
-  } = await supabase
-    .from('stock_opnames')
-    .select(`
-      id,
-      opname_no,
-      opname_date,
-      outlet_id,
-      status,
-      notes,
-      posted_at,
-      created_at
-    `)
-    .order('created_at', {
-      ascending: false,
-    })
+  } =
+    await supabase
+      .from(
+        'stock_opnames_secure'
+      )
+      .select(`
+        id,
+        opname_no,
+        opname_date,
+        outlet_id,
+        outlet_code,
+        outlet_name,
+        status,
+        notes,
+        posted_at,
+        created_at
+      `)
+      .order(
+        'opname_date',
+        {
+          ascending: false,
+        }
+      )
+      .order(
+        'created_at',
+        {
+          ascending: false,
+        }
+      )
 
-  const { data: outlets } = await supabase
-    .from('outlets')
-    .select(`
-      id,
-      code,
-      name
-    `)
+  // =====================================================
+  // ITEMS
+  // =====================================================
 
-  const { data: opnameItems } = await supabase
-    .from('stock_opname_items')
-    .select(`
-      opname_id,
-      difference_qty
-    `)
+  const opnameIds =
+    (opnames || []).map(
+      (row) =>
+        row.id
+    )
 
-  const outletMap = new Map(
-    (outlets || []).map((outlet) => [
-      outlet.id,
-      outlet,
-    ])
-  )
+  let itemRows: {
+    opname_id: string
+    difference_qty: number | string | null
+    variance_value: number | string | null
+  }[] = []
 
-  const countMap = new Map<
-    string,
-    {
-      items: number
-      variance: number
+  if (
+    opnameIds.length >
+    0
+  ) {
+    const {
+      data,
+    } =
+      await supabase
+        .from(
+          'stock_opname_items_secure'
+        )
+        .select(`
+          opname_id,
+          difference_qty,
+          variance_value
+        `)
+        .in(
+          'opname_id',
+          opnameIds
+        )
+
+    itemRows =
+      data || []
+  }
+
+  function getSummary(
+    opnameId: string
+  ) {
+    const rows =
+      itemRows.filter(
+        (row) =>
+          row.opname_id ===
+          opnameId
+      )
+
+    const match =
+      rows.filter(
+        (row) =>
+          Number(
+            row.difference_qty || 0
+          ) === 0
+      ).length
+
+    const shortage =
+      rows.filter(
+        (row) =>
+          Number(
+            row.difference_qty || 0
+          ) < 0
+      ).length
+
+    const surplus =
+      rows.filter(
+        (row) =>
+          Number(
+            row.difference_qty || 0
+          ) > 0
+      ).length
+
+    const variance =
+      rows.reduce(
+        (total, row) =>
+          total +
+          Number(
+            row.variance_value || 0
+          ),
+        0
+      )
+
+    return {
+      lines:
+        rows.length,
+      match,
+      shortage,
+      surplus,
+      variance,
     }
-  >()
+  }
 
-  for (const item of opnameItems || []) {
-    const current =
-      countMap.get(item.opname_id) || {
-        items: 0,
-        variance: 0,
+  function formatRupiah(
+    value: number
+  ) {
+    return new Intl.NumberFormat(
+      'id-ID',
+      {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
       }
+    ).format(value)
+  }
 
-    current.items += 1
-
-    if (Number(item.difference_qty) !== 0) {
-      current.variance += 1
+  function formatDate(
+    value:
+      string |
+      null
+  ) {
+    if (!value) {
+      return '-'
     }
 
-    countMap.set(
-      item.opname_id,
-      current
+    return new Intl.DateTimeFormat(
+      'id-ID',
+      {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Asia/Jakarta',
+      }
+    ).format(
+      new Date(
+        `${value}T12:00:00+07:00`
+      )
     )
   }
 
   return (
     <main className="min-h-screen bg-zinc-100 p-8 text-zinc-900">
+
       <div className="mx-auto max-w-7xl">
 
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
 
           <div>
+
             <Link
               href="/dashboard/inventory"
               className="text-sm text-zinc-500 hover:text-red-800"
@@ -104,18 +252,27 @@ export default async function StockOpnamePage() {
             </h1>
 
             <p className="mt-2 text-zinc-500">
-              Physical Stock Count & Adjustment
+              Physical Stock Count & Variance Control
             </p>
+
           </div>
 
-          <Link
-            href="/dashboard/inventory/opname/new"
-            className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-          >
-            + New Stock Opname
-          </Link>
+          {canCreate && (
+            <Link
+              href="/dashboard/inventory/opname/new"
+              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-bold text-white"
+            >
+              + New Stock Opname
+            </Link>
+          )}
 
         </div>
+
+        {!canViewCost && (
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+            Quantity variance is visible. Financial variance is restricted for this role.
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 rounded-xl bg-red-50 p-4 text-red-700">
@@ -123,125 +280,132 @@ export default async function StockOpnamePage() {
           </div>
         )}
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+        <div className="space-y-4">
 
-          <div className="border-b border-zinc-200 px-6 py-5">
-            <h2 className="font-bold">
-              Stock Opname History
-            </h2>
+          {(opnames || []).map(
+            (opname) => {
 
-            <p className="mt-1 text-sm text-zinc-500">
-              Posted physical stock counts
-            </p>
-          </div>
+              const summary =
+                getSummary(
+                  opname.id
+                )
 
-          <div className="overflow-x-auto">
+              return (
+                <Link
+                  key={opname.id}
+                  href={`/dashboard/inventory/opname/${opname.id}`}
+                  className="block rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                >
 
-            <table className="w-full text-left text-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-5">
 
-              <thead className="bg-zinc-50 text-zinc-500">
-                <tr>
-                  <th className="px-6 py-4">
-                    Opname No
-                  </th>
+                    <div>
 
-                  <th className="px-6 py-4">
-                    Date
-                  </th>
+                      <p className="text-xs font-semibold text-zinc-400">
+                        {formatDate(
+                          opname.opname_date
+                        )}
+                      </p>
 
-                  <th className="px-6 py-4">
-                    Location
-                  </th>
-
-                  <th className="px-6 py-4 text-right">
-                    Counted Items
-                  </th>
-
-                  <th className="px-6 py-4 text-right">
-                    Variance Items
-                  </th>
-
-                  <th className="px-6 py-4">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-zinc-100">
-
-                {(opnames || []).map((opname) => {
-                  const outlet =
-                    outletMap.get(
-                      opname.outlet_id
-                    )
-
-                  const counts =
-                    countMap.get(
-                      opname.id
-                    ) || {
-                      items: 0,
-                      variance: 0,
-                    }
-
-                  return (
-                    <tr
-                      key={opname.id}
-                      className="hover:bg-zinc-50"
-                    >
-                      <td className="px-6 py-4 font-bold text-red-900">
+                      <h2 className="mt-1 text-lg font-bold text-red-900">
                         {opname.opname_no}
-                      </td>
+                      </h2>
 
-                      <td className="px-6 py-4">
-                        {opname.opname_date}
-                      </td>
+                      <p className="mt-2 font-medium">
+                        {opname.outlet_name}
+                      </p>
 
-                      <td className="px-6 py-4">
-                        <p className="font-medium">
-                          {outlet?.name || '-'}
+                      <p className="text-xs text-zinc-400">
+                        {opname.outlet_code}
+                      </p>
+
+                    </div>
+
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                      {opname.status}
+                    </span>
+
+                  </div>
+
+                  <div
+                    className={`mt-6 grid gap-4 ${
+                      canViewCost
+                        ? 'md:grid-cols-5'
+                        : 'md:grid-cols-4'
+                    }`}
+                  >
+
+                    <div className="rounded-xl bg-zinc-50 p-4">
+                      <p className="text-xs text-zinc-400">
+                        Lines
+                      </p>
+                      <p className="mt-1 text-xl font-bold">
+                        {summary.lines}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-green-50 p-4">
+                      <p className="text-xs text-green-600">
+                        Match
+                      </p>
+                      <p className="mt-1 text-xl font-bold text-green-700">
+                        {summary.match}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-red-50 p-4">
+                      <p className="text-xs text-red-500">
+                        Shortage
+                      </p>
+                      <p className="mt-1 text-xl font-bold text-red-700">
+                        {summary.shortage}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-amber-50 p-4">
+                      <p className="text-xs text-amber-600">
+                        Surplus
+                      </p>
+                      <p className="mt-1 text-xl font-bold text-amber-700">
+                        {summary.surplus}
+                      </p>
+                    </div>
+
+                    {canViewCost && (
+                      <div className="rounded-xl bg-zinc-900 p-4 text-white">
+                        <p className="text-xs text-zinc-300">
+                          Net Variance
                         </p>
-
-                        <p className="text-xs text-zinc-400">
-                          {outlet?.code || ''}
+                        <p className="mt-1 text-lg font-bold">
+                          {formatRupiah(
+                            summary.variance
+                          )}
                         </p>
-                      </td>
+                      </div>
+                    )}
 
-                      <td className="px-6 py-4 text-right font-semibold">
-                        {counts.items}
-                      </td>
+                  </div>
 
-                      <td className="px-6 py-4 text-right font-semibold">
-                        {counts.variance}
-                      </td>
+                </Link>
+              )
+            }
+          )}
 
-                      <td className="px-6 py-4">
-                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                          {opname.status}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })}
-
-              </tbody>
-            </table>
-
-            {!opnames?.length && (
-              <div className="p-12 text-center">
-                <p className="font-semibold">
-                  No Stock Opname Yet
-                </p>
-
-                <p className="mt-2 text-sm text-zinc-500">
-                  Start your first physical stock count.
-                </p>
-              </div>
-            )}
-
-          </div>
         </div>
 
+        {!opnames?.length && (
+          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+            <p className="font-bold">
+              No Stock Opname
+            </p>
+            <p className="mt-2 text-sm text-zinc-500">
+              No stock opname is available for your authorized location.
+            </p>
+          </div>
+        )}
+
       </div>
+
     </main>
   )
 }

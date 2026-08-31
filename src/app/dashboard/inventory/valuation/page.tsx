@@ -2,79 +2,105 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-export default async function InventoryValuationPage() {
-  const supabase = await createClient()
+type SearchParams = Promise<{
+  outlet?: string
+}>
 
-  // =====================================================
-  // AUTH
-  // =====================================================
+export default async function InventoryValuationPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  const params =
+    await searchParams
+
+  const supabase =
+    await createClient()
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } =
+    await supabase.auth.getUser()
 
   if (!user) {
     redirect('/login')
   }
 
-  // =====================================================
-  // INVENTORY VALUATION
-  // =====================================================
+  let query =
+    supabase
+      .from(
+        'inventory_valuation_secure'
+      )
+      .select(`
+        outlet_id,
+        outlet_code,
+        outlet_name,
+        outlet_type,
+        item_id,
+        sku,
+        item_name,
+        item_type,
+        category_name,
+        base_unit_code,
+        base_unit_symbol,
+        stock_qty,
+        average_cost,
+        stock_value,
+        standard_cost,
+        last_cost,
+        minimum_stock,
+        stock_status,
+        valuation_status
+      `)
+      .order('outlet_name')
+      .order('item_name')
+
+  if (params.outlet) {
+    query =
+      query.eq(
+        'outlet_id',
+        params.outlet
+      )
+  }
 
   const {
-    data: valuation,
+    data: rows,
     error,
-  } = await supabase
-    .from('inventory_valuation')
-    .select(`
-      outlet_id,
-      outlet_code,
-      outlet_name,
-      outlet_type,
+  } =
+    await query
 
-      item_id,
-      sku,
-      item_name,
-      item_type,
+  const outletMap =
+    new Map<
+      string,
+      {
+        id: string
+        code: string
+        name: string
+      }
+    >()
 
-      category_code,
-      category_name,
+  for (
+    const row of
+      rows || []
+  ) {
+    if (
+      !outletMap.has(
+        row.outlet_id
+      )
+    ) {
+      outletMap.set(
+        row.outlet_id,
+        {
+          id: row.outlet_id,
+          code: row.outlet_code,
+          name: row.outlet_name,
+        }
+      )
+    }
+  }
 
-      base_unit_code,
-      base_unit_symbol,
-
-      stock_qty,
-      average_cost,
-      stock_value,
-
-      standard_cost,
-      last_cost,
-      minimum_stock,
-
-      stock_status,
-      valuation_status
-    `)
-    .order('outlet_name')
-    .order('item_name')
-
-  // =====================================================
-  // ONLY NON-ZERO STOCK
-  // =====================================================
-
-  const stockRows =
-    (valuation || []).filter(
-      (row) =>
-        Number(
-          row.stock_qty || 0
-        ) !== 0
-    )
-
-  // =====================================================
-  // SUMMARY
-  // =====================================================
-
-  const totalInventoryValue =
-    stockRows.reduce(
+  const totalValue =
+    (rows || []).reduce(
       (total, row) =>
         total +
         Number(
@@ -83,47 +109,34 @@ export default async function InventoryValuationPage() {
       0
     )
 
-  const activeStockLines =
-    stockRows.filter(
+  const positiveStock =
+    (rows || []).filter(
       (row) =>
         Number(
           row.stock_qty || 0
         ) > 0
     ).length
 
-  const lowStockLines =
-    stockRows.filter(
+  const noCost =
+    (rows || []).filter(
       (row) =>
-        row.stock_status ===
-        'LOW_STOCK'
+        row.valuation_status ===
+        'NO_COST'
     ).length
 
-  const valuationIssues =
-    stockRows.filter(
+  const negativeStock =
+    (rows || []).filter(
       (row) =>
-        row.valuation_status !==
-        'OK'
+        Number(
+          row.stock_qty || 0
+        ) < 0
     ).length
-
-  // =====================================================
-  // FORMAT
-  // =====================================================
-
-  function formatNumber(
-    value: number | string | null
-  ) {
-    return Number(
-      value || 0
-    ).toLocaleString(
-      'id-ID',
-      {
-        maximumFractionDigits: 4,
-      }
-    )
-  }
 
   function formatRupiah(
-    value: number | string | null
+    value:
+      number |
+      string |
+      null
   ) {
     return new Intl.NumberFormat(
       'id-ID',
@@ -139,387 +152,286 @@ export default async function InventoryValuationPage() {
     )
   }
 
-  function itemTypeLabel(
-    value: string
+  function formatCost(
+    value:
+      number |
+      string |
+      null
   ) {
-    if (
-      value ===
-      'RAW_MATERIAL'
-    ) {
-      return 'Raw Material'
-    }
-
-    if (
-      value ===
-      'WIP'
-    ) {
-      return 'WIP'
-    }
-
-    if (
-      value ===
-      'FINISHED_GOOD'
-    ) {
-      return 'Finished Good'
-    }
-
-    if (
-      value ===
-      'PACKAGING'
-    ) {
-      return 'Packaging'
-    }
-
-    if (
-      value ===
-      'CONSUMABLE'
-    ) {
-      return 'Consumable'
-    }
-
-    return value
+    return Number(
+      value || 0
+    ).toLocaleString(
+      'id-ID',
+      {
+        maximumFractionDigits: 4,
+      }
+    )
   }
 
-  function valuationClass(
-    value: string
+  function formatQty(
+    value:
+      number |
+      string |
+      null
   ) {
-    if (
-      value === 'OK'
-    ) {
-      return 'bg-green-100 text-green-700'
-    }
-
-    if (
-      value === 'NO_COST'
-    ) {
-      return 'bg-amber-100 text-amber-700'
-    }
-
-    return 'bg-red-100 text-red-700'
+    return Number(
+      value || 0
+    ).toLocaleString(
+      'id-ID',
+      {
+        maximumFractionDigits: 4,
+      }
+    )
   }
-
-  // =====================================================
-  // PAGE
-  // =====================================================
 
   return (
     <main className="min-h-screen bg-zinc-100 p-8 text-zinc-900">
 
       <div className="mx-auto max-w-7xl">
 
-        {/* HEADER */}
-
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-
-          <div>
-
-            <Link
-              href="/dashboard/inventory"
-              className="text-sm text-zinc-500 hover:text-red-800"
-            >
-              ← Inventory
-            </Link>
-
-            <p className="mt-5 text-sm font-bold tracking-wider text-red-800">
-              LAZY JENNIE
-            </p>
-
-            <h1 className="mt-2 text-3xl font-bold">
-              Inventory Valuation
-            </h1>
-
-            <p className="mt-2 text-zinc-500">
-              Weighted Average Cost & Current Stock Value
-            </p>
-
-          </div>
+        <div className="mb-8">
 
           <Link
-            href="/dashboard/inventory/movements"
-            className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
+            href="/dashboard/inventory"
+            className="text-sm text-zinc-500 hover:text-red-800"
           >
-            Stock Movement
+            ← Inventory
           </Link>
+
+          <p className="mt-5 text-sm font-bold tracking-wider text-red-800">
+            LAZY JENNIE
+          </p>
+
+          <h1 className="mt-2 text-3xl font-bold">
+            Inventory Valuation
+          </h1>
+
+          <p className="mt-2 text-zinc-500">
+            Weighted Average Cost & Current Stock Value
+          </p>
 
         </div>
 
-        {/* SUMMARY */}
+        <form
+          method="get"
+          className="mb-8 flex flex-wrap gap-4 rounded-2xl bg-white p-6 shadow-sm"
+        >
+
+          <div className="min-w-72">
+
+            <label className="mb-2 block text-sm font-semibold">
+              Location
+            </label>
+
+            <select
+              name="outlet"
+              defaultValue={
+                params.outlet || ''
+              }
+              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+            >
+
+              <option value="">
+                All Authorized Locations
+              </option>
+
+              {Array.from(
+                outletMap.values()
+              ).map(
+                (outlet) => (
+                  <option
+                    key={outlet.id}
+                    value={outlet.id}
+                  >
+                    {outlet.code}
+                    {' - '}
+                    {outlet.name}
+                  </option>
+                )
+              )}
+
+            </select>
+
+          </div>
+
+          <div className="flex items-end">
+
+            <button
+              type="submit"
+              className="rounded-xl bg-red-900 px-6 py-3 font-bold text-white"
+            >
+              Apply Filter
+            </button>
+
+          </div>
+
+        </form>
 
         <div className="mb-8 grid gap-4 md:grid-cols-4">
 
           <div className="rounded-2xl bg-red-950 p-6 text-white shadow-sm">
-
             <p className="text-sm text-red-200">
-              Total Inventory Value
+              Current Inventory Value
             </p>
-
-            <p className="mt-2 text-3xl font-bold">
+            <p className="mt-2 text-2xl font-bold">
               {formatRupiah(
-                totalInventoryValue
+                totalValue
               )}
             </p>
-
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-
             <p className="text-sm text-zinc-500">
-              Stock Lines
+              Items With Stock
             </p>
-
             <p className="mt-2 text-3xl font-bold">
-              {activeStockLines}
+              {positiveStock}
             </p>
-
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-
             <p className="text-sm text-zinc-500">
-              Low Stock
+              Missing Cost
             </p>
-
             <p className="mt-2 text-3xl font-bold text-amber-700">
-              {lowStockLines}
+              {noCost}
             </p>
-
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-
             <p className="text-sm text-zinc-500">
-              Valuation Issues
+              Negative Stock
             </p>
-
             <p className="mt-2 text-3xl font-bold text-red-700">
-              {valuationIssues}
+              {negativeStock}
             </p>
-
           </div>
 
         </div>
 
-        {/* DATABASE ERROR */}
-
         {error && (
-          <div className="mb-6 rounded-xl bg-red-50 p-5 text-red-700">
-
-            <p className="font-bold">
-              Inventory Valuation Error
-            </p>
-
-            <p className="mt-2 text-sm">
-              {error.message}
-            </p>
-
+          <div className="mb-6 rounded-xl bg-red-50 p-4 text-red-700">
+            {error.message}
           </div>
         )}
 
-        {/* TABLE */}
-
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-
-          <div className="border-b border-zinc-200 px-6 py-5">
-
-            <h2 className="font-bold">
-              Current Inventory Value
-            </h2>
-
-            <p className="mt-1 text-sm text-zinc-500">
-              Current stock valued using Weighted Average Cost.
-            </p>
-
-          </div>
 
           <div className="overflow-x-auto">
 
             <table className="w-full text-left text-sm">
 
               <thead className="bg-zinc-50 text-zinc-500">
-
                 <tr>
-
-                  <th className="px-5 py-4">
+                  <th className="px-4 py-4">
                     Location
                   </th>
-
-                  <th className="px-5 py-4">
+                  <th className="px-4 py-4">
                     Item
                   </th>
-
-                  <th className="px-5 py-4">
-                    Type
+                  <th className="px-4 py-4">
+                    Category
                   </th>
-
-                  <th className="px-5 py-4 text-right">
+                  <th className="px-4 py-4 text-right">
                     Stock
                   </th>
-
-                  <th className="px-5 py-4">
-                    Unit
+                  <th className="px-4 py-4 text-right">
+                    WAC / Base
                   </th>
-
-                  <th className="px-5 py-4 text-right">
-                    Avg Cost
-                  </th>
-
-                  <th className="px-5 py-4 text-right">
+                  <th className="px-4 py-4 text-right">
                     Stock Value
                   </th>
-
-                  <th className="px-5 py-4">
-                    Stock Status
+                  <th className="px-4 py-4 text-right">
+                    Last Cost
                   </th>
-
-                  <th className="px-5 py-4">
+                  <th className="px-4 py-4">
                     Valuation
                   </th>
-
                 </tr>
-
               </thead>
 
               <tbody className="divide-y divide-zinc-100">
 
-                {stockRows.map(
+                {(rows || []).map(
                   (row) => (
-
                     <tr
                       key={`${row.outlet_id}-${row.item_id}`}
-                      className="hover:bg-zinc-50"
                     >
 
-                      <td className="px-5 py-4">
-
+                      <td className="px-4 py-4">
                         <p className="font-medium">
                           {row.outlet_name}
                         </p>
-
                         <p className="text-xs text-zinc-400">
                           {row.outlet_code}
                         </p>
-
                       </td>
 
-                      <td className="px-5 py-4">
-
-                        <p className="font-medium">
+                      <td className="px-4 py-4">
+                        <p className="font-bold">
                           {row.item_name}
                         </p>
-
                         <p className="text-xs text-zinc-400">
                           {row.sku}
                         </p>
-
-                        <p className="mt-1 text-xs text-zinc-400">
-                          {row.category_name || ''}
-                        </p>
-
                       </td>
 
-                      <td className="px-5 py-4">
-
-                        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
-                          {itemTypeLabel(
-                            row.item_type
-                          )}
-                        </span>
-
+                      <td className="px-4 py-4">
+                        {row.category_name ||
+                          '-'}
                       </td>
 
-                      <td className="px-5 py-4 text-right font-bold">
-                        {formatNumber(
+                      <td className="px-4 py-4 text-right font-bold">
+                        {formatQty(
                           row.stock_qty
+                        )}
+                        {' '}
+                        {row.base_unit_symbol ||
+                          row.base_unit_code}
+                      </td>
+
+                      <td className="px-4 py-4 text-right">
+                        Rp{' '}
+                        {formatCost(
+                          row.average_cost
                         )}
                       </td>
 
-                      <td className="px-5 py-4">
-                        {row.base_unit_code}
-                      </td>
-
-                      <td className="px-5 py-4 text-right">
-
-                        <p className="font-semibold">
-                          {formatRupiah(
-                            row.average_cost
-                          )}
-                        </p>
-
-                        <p className="mt-1 text-xs text-zinc-400">
-                          / {row.base_unit_code}
-                        </p>
-
-                      </td>
-
-                      <td className="px-5 py-4 text-right font-bold text-red-900">
+                      <td className="px-4 py-4 text-right font-bold">
                         {formatRupiah(
                           row.stock_value
                         )}
                       </td>
 
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-4 text-right">
+                        Rp{' '}
+                        {formatCost(
+                          row.last_cost
+                        )}
+                      </td>
 
-                        {row.stock_status ===
-                        'AVAILABLE' ? (
+                      <td className="px-4 py-4">
 
-                          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                            Available
+                        {row.valuation_status ===
+                        'OK' ? (
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                            OK
                           </span>
-
-                        ) : row.stock_status ===
-                          'LOW_STOCK' ? (
-
-                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                            Low Stock
-                          </span>
-
                         ) : (
-
-                          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                            Out of Stock
+                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                            {row.valuation_status}
                           </span>
-
                         )}
 
                       </td>
 
-                      <td className="px-5 py-4">
-
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${valuationClass(
-                            row.valuation_status
-                          )}`}
-                        >
-                          {row.valuation_status}
-                        </span>
-
-                      </td>
-
                     </tr>
-
                   )
                 )}
 
               </tbody>
 
             </table>
-
-            {!error &&
-              !stockRows.length && (
-
-              <div className="p-12 text-center">
-
-                <p className="font-semibold">
-                  No Inventory Value Yet
-                </p>
-
-                <p className="mt-2 text-sm text-zinc-500">
-                  Inventory valuation will appear after stock transactions are posted.
-                </p>
-
-              </div>
-
-            )}
 
           </div>
 

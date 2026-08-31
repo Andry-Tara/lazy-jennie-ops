@@ -26,7 +26,7 @@ export default async function NewTransferPage() {
     .order('name')
 
   const { data: stock } = await supabase
-    .from('inventory_stock')
+    .from('inventory_stock_secure')
     .select(`
       outlet_id,
       item_id,

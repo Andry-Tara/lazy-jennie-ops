@@ -2,7 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-export default async function TransfersPage() {
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
+export default async function StockTransfersPage() {
   const supabase = await createClient()
 
   const {
@@ -13,84 +22,132 @@ export default async function TransfersPage() {
     redirect('/login')
   }
 
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const transferPermission = permissions.find(
+    (row) => row.module_code === 'STOCK_TRANSFER'
+  )
+
+  const canCreate = Boolean(
+    transferPermission?.can_create &&
+      transferPermission?.can_post
+  )
+
+  const canViewCost = permissions.some(
+    (row) =>
+      row.can_view === true &&
+      [
+        'INVENTORY_VALUATION',
+        'COSTING',
+      ].includes(row.module_code)
+  )
+
   const {
     data: transfers,
     error,
   } = await supabase
-    .from('stock_transfers')
+    .from('stock_transfers_secure')
     .select(`
       id,
       transfer_no,
       transfer_date,
       from_outlet_id,
+      from_outlet_code,
+      from_outlet_name,
       to_outlet_id,
+      to_outlet_code,
+      to_outlet_name,
       status,
       notes,
       posted_at,
       created_at
     `)
-    .order('created_at', {
-      ascending: false,
-    })
+    .order('transfer_date', { ascending: false })
+    .order('created_at', { ascending: false })
 
-  const { data: outlets } = await supabase
-    .from('outlets')
-    .select(`
-      id,
-      code,
-      name
-    `)
+  const transferIds = (transfers || []).map((row) => row.id)
 
-  const { data: transferItems } = await supabase
-    .from('stock_transfer_items')
-    .select(`
-      transfer_id,
-      base_qty,
-      total_value
-    `)
+  let itemRows: {
+    transfer_id: string
+    base_qty: number | string | null
+    total_value: number | string | null
+  }[] = []
 
-  const outletMap = new Map(
-    (outlets || []).map((outlet) => [
-      outlet.id,
-      outlet,
-    ])
-  )
+  if (transferIds.length > 0) {
+    const { data } = await supabase
+      .from('stock_transfer_items_secure')
+      .select(`
+        transfer_id,
+        base_qty,
+        total_value
+      `)
+      .in('transfer_id', transferIds)
 
-  const summaryMap = new Map<
-    string,
-    {
-      itemCount: number
-      totalValue: number
-    }
-  >()
-
-  for (const item of transferItems || []) {
-    const current =
-      summaryMap.get(item.transfer_id) || {
-        itemCount: 0,
-        totalValue: 0,
-      }
-
-    current.itemCount += 1
-
-    current.totalValue +=
-      Number(item.total_value || 0)
-
-    summaryMap.set(
-      item.transfer_id,
-      current
-    )
+    itemRows = data || []
   }
 
-  function formatRupiah(value: number) {
-    return new Intl.NumberFormat(
-      'id-ID',
-      {
-        style: 'currency',
-        currency: 'IDR',
-        maximumFractionDigits: 0,
-      }
-    ).format(value)
+  function getSummary(transferId: string) {
+    const rows = itemRows.filter(
+      (row) => row.transfer_id === transferId
+    )
+
+    return {
+      lines: rows.length,
+      quantity: rows.reduce(
+        (total, row) => total + Number(row.base_qty || 0),
+        0
+      ),
+      value: rows.reduce(
+        (total, row) => total + Number(row.total_value || 0),
+        0
+      ),
+    }
+  }
+
+  const totalValue = canViewCost
+    ? itemRows.reduce(
+        (total, row) => total + Number(row.total_value || 0),
+        0
+      )
+    : 0
+
+  function formatQty(
+    value: number | string | null
+  ) {
+    return Number(value || 0).toLocaleString('id-ID', {
+      maximumFractionDigits: 4,
+    })
+  }
+
+  function formatRupiah(
+    value: number | string | null
+  ) {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0))
+  }
+
+  function formatDate(
+    value: string | null
+  ) {
+    if (!value) {
+      return '-'
+    }
+
+    return new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(
+      new Date(`${value}T12:00:00+07:00`)
+    )
   }
 
   return (
@@ -98,7 +155,6 @@ export default async function TransfersPage() {
       <div className="mx-auto max-w-7xl">
 
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-
           <div>
             <Link
               href="/dashboard/inventory"
@@ -116,17 +172,66 @@ export default async function TransfersPage() {
             </h1>
 
             <p className="mt-2 text-zinc-500">
-              Inventory Movement Between Locations
+              Stock Movement Between Authorized Locations
             </p>
           </div>
 
-          <Link
-            href="/dashboard/inventory/transfers/new"
-            className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-          >
-            + New Transfer
-          </Link>
+          {canCreate && (
+            <Link
+              href="/dashboard/inventory/transfers/new"
+              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-bold text-white hover:bg-red-800"
+            >
+              + New Transfer
+            </Link>
+          )}
+        </div>
 
+        {!canViewCost && (
+          <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+            <p className="font-bold text-blue-900">
+              Operational Transfer View
+            </p>
+            <p className="mt-1 text-sm text-blue-800">
+              Transfer quantity is visible. WAC and transfer value are restricted for this role.
+            </p>
+          </div>
+        )}
+
+        <div
+          className={`mb-8 grid gap-4 ${
+            canViewCost
+              ? 'md:grid-cols-3'
+              : 'md:grid-cols-2'
+          }`}
+        >
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <p className="text-sm text-zinc-500">
+              Transfers
+            </p>
+            <p className="mt-2 text-3xl font-bold">
+              {transfers?.length || 0}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white p-6 shadow-sm">
+            <p className="text-sm text-zinc-500">
+              Item Lines
+            </p>
+            <p className="mt-2 text-3xl font-bold">
+              {itemRows.length}
+            </p>
+          </div>
+
+          {canViewCost && (
+            <div className="rounded-2xl bg-red-950 p-6 text-white shadow-sm">
+              <p className="text-sm text-red-200">
+                Transfer Value
+              </p>
+              <p className="mt-2 text-2xl font-bold">
+                {formatRupiah(totalValue)}
+              </p>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -135,160 +240,118 @@ export default async function TransfersPage() {
           </div>
         )}
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+        <div className="space-y-4">
+          {(transfers || []).map((transfer) => {
+            const summary = getSummary(transfer.id)
 
-          <div className="border-b border-zinc-200 px-6 py-5">
+            return (
+              <div
+                key={transfer.id}
+                className="rounded-2xl bg-white p-6 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-5">
+                  <div>
+                    <p className="text-xs text-zinc-400">
+                      {formatDate(transfer.transfer_date)}
+                    </p>
 
-            <h2 className="font-bold">
-              Transfer History
-            </h2>
+                    <h2 className="mt-1 text-lg font-bold text-red-900">
+                      {transfer.transfer_no}
+                    </h2>
+                  </div>
 
-            <p className="mt-1 text-sm text-zinc-500">
-              Posted inventory transfers
-            </p>
+                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                    {transfer.status}
+                  </span>
+                </div>
 
-          </div>
+                <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto_1fr]">
+                  <div className="rounded-xl bg-zinc-50 p-5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                      From
+                    </p>
+                    <p className="mt-2 font-bold">
+                      {transfer.from_outlet_name}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      {transfer.from_outlet_code}
+                    </p>
+                  </div>
 
-          <div className="overflow-x-auto">
+                  <div className="flex items-center justify-center text-2xl text-zinc-400">
+                    →
+                  </div>
 
-            <table className="w-full text-left text-sm">
+                  <div className="rounded-xl bg-zinc-50 p-5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                      To
+                    </p>
+                    <p className="mt-2 font-bold">
+                      {transfer.to_outlet_name}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      {transfer.to_outlet_code}
+                    </p>
+                  </div>
+                </div>
 
-              <thead className="bg-zinc-50 text-zinc-500">
-                <tr>
+                <div
+                  className={`mt-5 grid gap-4 ${
+                    canViewCost
+                      ? 'md:grid-cols-3'
+                      : 'md:grid-cols-2'
+                  }`}
+                >
+                  <div>
+                    <p className="text-xs text-zinc-400">
+                      Item Lines
+                    </p>
+                    <p className="mt-1 font-bold">
+                      {summary.lines}
+                    </p>
+                  </div>
 
-                  <th className="px-6 py-4">
-                    Transfer No
-                  </th>
+                  <div>
+                    <p className="text-xs text-zinc-400">
+                      Base Qty
+                    </p>
+                    <p className="mt-1 font-bold">
+                      {formatQty(summary.quantity)}
+                    </p>
+                  </div>
 
-                  <th className="px-6 py-4">
-                    Date
-                  </th>
+                  {canViewCost && (
+                    <div>
+                      <p className="text-xs text-zinc-400">
+                        Transfer Value
+                      </p>
+                      <p className="mt-1 font-bold">
+                        {formatRupiah(summary.value)}
+                      </p>
+                    </div>
+                  )}
+                </div>
 
-                  <th className="px-6 py-4">
-                    From
-                  </th>
-
-                  <th className="px-6 py-4">
-                    To
-                  </th>
-
-                  <th className="px-6 py-4 text-right">
-                    Items
-                  </th>
-
-                  <th className="px-6 py-4 text-right">
-                    Value
-                  </th>
-
-                  <th className="px-6 py-4">
-                    Status
-                  </th>
-
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-zinc-100">
-
-                {(transfers || []).map((transfer) => {
-
-                  const from =
-                    outletMap.get(
-                      transfer.from_outlet_id
-                    )
-
-                  const to =
-                    outletMap.get(
-                      transfer.to_outlet_id
-                    )
-
-                  const summary =
-                    summaryMap.get(
-                      transfer.id
-                    ) || {
-                      itemCount: 0,
-                      totalValue: 0,
-                    }
-
-                  return (
-                    <tr
-                      key={transfer.id}
-                      className="hover:bg-zinc-50"
-                    >
-
-                      <td className="px-6 py-4 font-bold text-red-900">
-                        {transfer.transfer_no}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        {transfer.transfer_date}
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <p className="font-medium">
-                          {from?.name || '-'}
-                        </p>
-
-                        <p className="text-xs text-zinc-400">
-                          {from?.code || ''}
-                        </p>
-
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <p className="font-medium">
-                          {to?.name || '-'}
-                        </p>
-
-                        <p className="text-xs text-zinc-400">
-                          {to?.code || ''}
-                        </p>
-
-                      </td>
-
-                      <td className="px-6 py-4 text-right font-semibold">
-                        {summary.itemCount}
-                      </td>
-
-                      <td className="px-6 py-4 text-right font-semibold">
-                        {formatRupiah(
-                          summary.totalValue
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                          {transfer.status}
-                        </span>
-
-                      </td>
-
-                    </tr>
-                  )
-                })}
-
-              </tbody>
-
-            </table>
-
-            {!transfers?.length && (
-              <div className="p-12 text-center">
-
-                <p className="font-semibold">
-                  No Stock Transfer Yet
-                </p>
-
-                <p className="mt-2 text-sm text-zinc-500">
-                  Create your first inventory transfer.
-                </p>
-
+                {transfer.notes && (
+                  <p className="mt-5 border-t border-zinc-100 pt-4 text-sm text-zinc-500">
+                    {transfer.notes}
+                  </p>
+                )}
               </div>
-            )}
-
-          </div>
+            )
+          })}
         </div>
+
+        {!transfers?.length && (
+          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+            <p className="font-bold">
+              No Stock Transfer
+            </p>
+            <p className="mt-2 text-sm text-zinc-500">
+              No transfer is available for your authorized location.
+            </p>
+          </div>
+        )}
 
       </div>
     </main>

@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 export default async function WastePage() {
   const supabase = await createClient()
 
@@ -13,134 +22,147 @@ export default async function WastePage() {
     redirect('/login')
   }
 
-  // =====================================================
-  // WASTE HEADER
-  // =====================================================
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const wastePermission = permissions.find(
+    (row) => row.module_code === 'WASTE'
+  )
+
+  const canCreate = Boolean(
+    wastePermission?.can_create &&
+      wastePermission?.can_post
+  )
+
+  const canViewCost = permissions.some(
+    (row) =>
+      row.can_view === true &&
+      [
+        'INVENTORY_VALUATION',
+        'COSTING',
+      ].includes(row.module_code)
+  )
 
   const {
     data: wastes,
     error,
   } = await supabase
-    .from('wastes')
+    .from('wastes_secure')
     .select(`
       id,
       waste_no,
       waste_date,
       outlet_id,
+      outlet_code,
+      outlet_name,
       status,
       notes,
       posted_at,
       created_at
     `)
-    .order('created_at', {
-      ascending: false,
-    })
+    .order('waste_date', { ascending: false })
+    .order('created_at', { ascending: false })
 
-  // =====================================================
-  // OUTLETS
-  // =====================================================
+  const wasteIds = (wastes || []).map((row) => row.id)
 
-  const { data: outlets } = await supabase
-    .from('outlets')
-    .select(`
-      id,
-      code,
-      name
-    `)
+  let itemRows: {
+    waste_id: string
+    reason: string | null
+    base_qty: number | string | null
+    total_loss: number | string | null
+  }[] = []
 
-  // =====================================================
-  // WASTE ITEMS
-  // =====================================================
+  if (wasteIds.length > 0) {
+    const { data } = await supabase
+      .from('waste_items_secure')
+      .select(`
+        waste_id,
+        reason,
+        base_qty,
+        total_loss
+      `)
+      .in('waste_id', wasteIds)
 
-  const { data: wasteItems } = await supabase
-    .from('waste_items')
-    .select(`
-      waste_id,
-      base_qty,
-      total_loss,
-      reason
-    `)
-
-  // =====================================================
-  // OUTLET LOOKUP
-  // =====================================================
-
-  const outletMap = new Map(
-    (outlets || []).map((outlet) => [
-      outlet.id,
-      outlet,
-    ])
-  )
-
-  // =====================================================
-  // SUMMARY PER WASTE
-  // =====================================================
-
-  const wasteSummary = new Map<
-    string,
-    {
-      itemCount: number
-      totalLoss: number
-    }
-  >()
-
-  for (const item of wasteItems || []) {
-    const current =
-      wasteSummary.get(item.waste_id) || {
-        itemCount: 0,
-        totalLoss: 0,
-      }
-
-    current.itemCount += 1
-
-    current.totalLoss +=
-      Number(item.total_loss || 0)
-
-    wasteSummary.set(
-      item.waste_id,
-      current
-    )
+    itemRows = data || []
   }
 
-  // =====================================================
-  // GLOBAL SUMMARY
-  // =====================================================
-
-  const totalLoss =
-    (wasteItems || []).reduce(
-      (total, item) =>
-        total +
-        Number(item.total_loss || 0),
-      0
+  function getSummary(wasteId: string) {
+    const rows = itemRows.filter(
+      (row) => row.waste_id === wasteId
     )
 
-  const totalLines =
-    wasteItems?.length || 0
+    const reasons = Array.from(
+      new Set(
+        rows
+          .map((row) => row.reason)
+          .filter(Boolean)
+      )
+    )
 
-  const totalDocuments =
-    wastes?.length || 0
+    return {
+      lines: rows.length,
+      quantity: rows.reduce(
+        (total, row) => total + Number(row.base_qty || 0),
+        0
+      ),
+      loss: rows.reduce(
+        (total, row) => total + Number(row.total_loss || 0),
+        0
+      ),
+      reasons,
+    }
+  }
+
+  const totalLoss = canViewCost
+    ? itemRows.reduce(
+        (total, row) => total + Number(row.total_loss || 0),
+        0
+      )
+    : 0
+
+  function formatQty(
+    value: number | string | null
+  ) {
+    return Number(value || 0).toLocaleString('id-ID', {
+      maximumFractionDigits: 4,
+    })
+  }
 
   function formatRupiah(
-    value: number
+    value: number | string | null
   ) {
-    return new Intl.NumberFormat(
-      'id-ID',
-      {
-        style: 'currency',
-        currency: 'IDR',
-        maximumFractionDigits: 0,
-      }
-    ).format(value)
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0))
+  }
+
+  function formatDate(
+    value: string | null
+  ) {
+    if (!value) {
+      return '-'
+    }
+
+    return new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(
+      new Date(`${value}T12:00:00+07:00`)
+    )
   }
 
   return (
     <main className="min-h-screen bg-zinc-100 p-8 text-zinc-900">
       <div className="mx-auto max-w-7xl">
 
-        {/* HEADER */}
-
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-
           <div>
             <Link
               href="/dashboard/inventory"
@@ -154,66 +176,71 @@ export default async function WastePage() {
             </p>
 
             <h1 className="mt-2 text-3xl font-bold">
-              Waste & Spoilage
+              Waste Management
             </h1>
 
             <p className="mt-2 text-zinc-500">
-              Inventory Waste Monitoring
+              Waste, Spoilage & Inventory Loss by Authorized Location
             </p>
           </div>
 
-          <Link
-            href="/dashboard/inventory/waste/new"
-            className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-          >
-            + New Waste
-          </Link>
-
+          {canCreate && (
+            <Link
+              href="/dashboard/inventory/waste/new"
+              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-bold text-white hover:bg-red-800"
+            >
+              + Record Waste
+            </Link>
+          )}
         </div>
 
-        {/* SUMMARY */}
+        {!canViewCost && (
+          <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+            <p className="font-bold text-blue-900">
+              Operational Waste View
+            </p>
+            <p className="mt-1 text-sm text-blue-800">
+              Waste quantity and reason are visible. Financial loss value is restricted for this role.
+            </p>
+          </div>
+        )}
 
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
-
+        <div
+          className={`mb-8 grid gap-4 ${
+            canViewCost
+              ? 'md:grid-cols-3'
+              : 'md:grid-cols-2'
+          }`}
+        >
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-
             <p className="text-sm text-zinc-500">
               Waste Documents
             </p>
-
             <p className="mt-2 text-3xl font-bold">
-              {totalDocuments}
+              {wastes?.length || 0}
             </p>
-
           </div>
 
           <div className="rounded-2xl bg-white p-6 shadow-sm">
-
             <p className="text-sm text-zinc-500">
-              Waste Item Lines
+              Item Lines
             </p>
-
             <p className="mt-2 text-3xl font-bold">
-              {totalLines}
+              {itemRows.length}
             </p>
-
           </div>
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
-
-            <p className="text-sm text-zinc-500">
-              Total Waste Value
-            </p>
-
-            <p className="mt-2 text-2xl font-bold text-red-700">
-              {formatRupiah(totalLoss)}
-            </p>
-
-          </div>
-
+          {canViewCost && (
+            <div className="rounded-2xl bg-red-950 p-6 text-white shadow-sm">
+              <p className="text-sm text-red-200">
+                Waste Loss
+              </p>
+              <p className="mt-2 text-2xl font-bold">
+                {formatRupiah(totalLoss)}
+              </p>
+            </div>
+          )}
         </div>
-
-        {/* ERROR */}
 
         {error && (
           <div className="mb-6 rounded-xl bg-red-50 p-4 text-red-700">
@@ -221,149 +248,107 @@ export default async function WastePage() {
           </div>
         )}
 
-        {/* TABLE */}
+        <div className="space-y-4">
+          {(wastes || []).map((waste) => {
+            const summary = getSummary(waste.id)
 
-        <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+            return (
+              <div
+                key={waste.id}
+                className="rounded-2xl bg-white p-6 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-5">
+                  <div>
+                    <p className="text-xs text-zinc-400">
+                      {formatDate(waste.waste_date)}
+                    </p>
 
-          <div className="border-b border-zinc-200 px-6 py-5">
+                    <h2 className="mt-1 text-lg font-bold text-red-900">
+                      {waste.waste_no}
+                    </h2>
 
-            <h2 className="font-bold">
-              Waste History
-            </h2>
+                    <p className="mt-2 font-medium">
+                      {waste.outlet_name}
+                    </p>
 
-            <p className="mt-1 text-sm text-zinc-500">
-              Posted waste transactions
-            </p>
+                    <p className="text-xs text-zinc-400">
+                      {waste.outlet_code}
+                    </p>
+                  </div>
 
-          </div>
+                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
+                    {waste.status}
+                  </span>
+                </div>
 
-          <div className="overflow-x-auto">
+                <div
+                  className={`mt-6 grid gap-4 ${
+                    canViewCost
+                      ? 'md:grid-cols-4'
+                      : 'md:grid-cols-3'
+                  }`}
+                >
+                  <div className="rounded-xl bg-zinc-50 p-4">
+                    <p className="text-xs text-zinc-400">
+                      Lines
+                    </p>
+                    <p className="mt-1 text-xl font-bold">
+                      {summary.lines}
+                    </p>
+                  </div>
 
-            <table className="w-full text-left text-sm">
+                  <div className="rounded-xl bg-zinc-50 p-4">
+                    <p className="text-xs text-zinc-400">
+                      Base Qty
+                    </p>
+                    <p className="mt-1 text-xl font-bold">
+                      {formatQty(summary.quantity)}
+                    </p>
+                  </div>
 
-              <thead className="bg-zinc-50 text-zinc-500">
+                  <div className="rounded-xl bg-zinc-50 p-4">
+                    <p className="text-xs text-zinc-400">
+                      Reasons
+                    </p>
+                    <p className="mt-1 text-sm font-bold">
+                      {summary.reasons.length > 0
+                        ? summary.reasons.join(', ')
+                        : '-'}
+                    </p>
+                  </div>
 
-                <tr>
-                  <th className="px-6 py-4">
-                    Waste No
-                  </th>
+                  {canViewCost && (
+                    <div className="rounded-xl bg-red-50 p-4">
+                      <p className="text-xs text-red-500">
+                        Loss
+                      </p>
+                      <p className="mt-1 text-lg font-bold text-red-700">
+                        {formatRupiah(summary.loss)}
+                      </p>
+                    </div>
+                  )}
+                </div>
 
-                  <th className="px-6 py-4">
-                    Date
-                  </th>
-
-                  <th className="px-6 py-4">
-                    Location
-                  </th>
-
-                  <th className="px-6 py-4 text-right">
-                    Items
-                  </th>
-
-                  <th className="px-6 py-4 text-right">
-                    Waste Value
-                  </th>
-
-                  <th className="px-6 py-4">
-                    Notes
-                  </th>
-
-                  <th className="px-6 py-4">
-                    Status
-                  </th>
-                </tr>
-
-              </thead>
-
-              <tbody className="divide-y divide-zinc-100">
-
-                {(wastes || []).map((waste) => {
-
-                  const outlet =
-                    outletMap.get(
-                      waste.outlet_id
-                    )
-
-                  const summary =
-                    wasteSummary.get(
-                      waste.id
-                    ) || {
-                      itemCount: 0,
-                      totalLoss: 0,
-                    }
-
-                  return (
-                    <tr
-                      key={waste.id}
-                      className="hover:bg-zinc-50"
-                    >
-
-                      <td className="px-6 py-4 font-bold text-red-900">
-                        {waste.waste_no}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        {waste.waste_date}
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <p className="font-medium">
-                          {outlet?.name || '-'}
-                        </p>
-
-                        <p className="text-xs text-zinc-400">
-                          {outlet?.code || ''}
-                        </p>
-
-                      </td>
-
-                      <td className="px-6 py-4 text-right font-semibold">
-                        {summary.itemCount}
-                      </td>
-
-                      <td className="px-6 py-4 text-right font-semibold text-red-700">
-                        {formatRupiah(
-                          summary.totalLoss
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4 text-zinc-500">
-                        {waste.notes || '-'}
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                          {waste.status}
-                        </span>
-
-                      </td>
-
-                    </tr>
-                  )
-                })}
-
-              </tbody>
-
-            </table>
-
-            {!wastes?.length && (
-              <div className="p-12 text-center">
-
-                <p className="font-semibold">
-                  No Waste Transaction Yet
-                </p>
-
-                <p className="mt-2 text-sm text-zinc-500">
-                  Record expired, spoiled or damaged inventory here.
-                </p>
-
+                {waste.notes && (
+                  <p className="mt-5 border-t border-zinc-100 pt-4 text-sm text-zinc-500">
+                    {waste.notes}
+                  </p>
+                )}
               </div>
-            )}
-
-          </div>
+            )
+          })}
         </div>
+
+        {!wastes?.length && (
+          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+            <p className="font-bold">
+              No Waste Transactions
+            </p>
+            <p className="mt-2 text-sm text-zinc-500">
+              No waste transactions are available for your authorized location.
+            </p>
+          </div>
+        )}
 
       </div>
     </main>
