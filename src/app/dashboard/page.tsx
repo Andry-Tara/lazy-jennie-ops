@@ -225,7 +225,7 @@ export default async function DashboardPage({
       data: outlet,
     } =
       await supabase
-        .from('outlets')
+        .from('outlets_secure')
         .select(`
           code,
           name

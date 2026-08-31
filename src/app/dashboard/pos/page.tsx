@@ -124,7 +124,7 @@ export default async function POSPage() {
     error: outletError,
   } =
     await supabase
-      .from('outlets')
+      .from('outlets_secure')
       .select(`
         id,
         code,

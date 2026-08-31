@@ -4,6 +4,15 @@ import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 type Props = {
   params: Promise<{
     id: string
@@ -15,9 +24,40 @@ export default async function EditOutletPage({ params }: Props) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const outletPermission = permissions.find(
+    (row) => row.module_code === 'OUTLETS'
+  )
+
+  if (!outletPermission?.can_update) {
+    redirect('/dashboard?denied=OUTLETS')
+  }
+
   const { data: outlet } = await supabase
-    .from('outlets')
-    .select('*')
+    .from('outlets_secure')
+    .select(`
+      id,
+      code,
+      name,
+      type,
+      address,
+      phone,
+      timezone,
+      is_active
+    `)
     .eq('id', id)
     .single()
 
@@ -35,30 +75,49 @@ export default async function EditOutletPage({ params }: Props) {
       .toUpperCase()
 
     const name = String(formData.get('name') || '').trim()
-    const type = String(formData.get('type') || '')
-    const address = String(formData.get('address') || '').trim()
-    const phone = String(formData.get('phone') || '').trim()
+
+    const type = String(
+      formData.get('type') || 'OUTLET'
+    )
+      .trim()
+      .toUpperCase()
+
+    const address = String(
+      formData.get('address') || ''
+    ).trim()
+
+    const phone = String(
+      formData.get('phone') || ''
+    ).trim()
+
+    const timezone = String(
+      formData.get('timezone') || 'Asia/Jakarta'
+    ).trim()
 
     const isActive =
       String(formData.get('is_active')) === 'true'
 
-    const { error } = await supabase
-      .from('outlets')
-      .update({
-        code,
-        name,
-        type,
-        address: address || null,
-        phone: phone || null,
-        is_active: isActive,
-      })
-      .eq('id', id)
+    const { error } = await supabase.rpc(
+      'update_outlet_secure',
+      {
+        p_outlet_id: id,
+        p_code: code,
+        p_name: name,
+        p_type: type,
+        p_address: address || null,
+        p_phone: phone || null,
+        p_timezone: timezone || 'Asia/Jakarta',
+        p_is_active: isActive,
+      }
+    )
 
     if (error) {
       throw new Error(error.message)
     }
 
     revalidatePath('/dashboard/outlets')
+    revalidatePath(`/dashboard/outlets/${id}/edit`)
+
     redirect('/dashboard/outlets')
   }
 
@@ -159,6 +218,19 @@ export default async function EditOutletPage({ params }: Props) {
             <input
               name="phone"
               defaultValue={outlet.phone || ''}
+              className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold">
+              Timezone
+            </label>
+
+            <input
+              name="timezone"
+              required
+              defaultValue={outlet.timezone || 'Asia/Jakarta'}
               className="w-full rounded-xl border border-zinc-300 px-4 py-3"
             />
           </div>

@@ -63,7 +63,7 @@ export default async function CostingPage({
   // =====================================================
 
   const { data: outlets } = await supabase
-    .from('outlets')
+    .from('outlets_secure')
     .select(`
       id,
       code,

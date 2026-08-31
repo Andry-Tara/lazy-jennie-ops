@@ -35,7 +35,7 @@ export default async function NewPurchaseOrderPage() {
   }
 
   const { data: outlets } = await supabase
-    .from('outlets')
+    .from('outlets_secure')
     .select(`
       id,
       code,

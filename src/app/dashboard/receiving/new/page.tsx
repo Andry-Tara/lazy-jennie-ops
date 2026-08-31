@@ -35,7 +35,7 @@ export default async function NewReceivingPage() {
   }
 
   const { data: outlets } = await supabase
-    .from('outlets')
+    .from('outlets_secure')
     .select('id, code, name')
     .eq('is_active', true)
     .order('name')

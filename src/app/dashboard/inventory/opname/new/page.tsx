@@ -15,7 +15,7 @@ export default async function NewStockOpnamePage() {
   }
 
   const { data: outlets } = await supabase
-    .from('outlets')
+    .from('outlets_secure')
     .select(`
       id,
       code,

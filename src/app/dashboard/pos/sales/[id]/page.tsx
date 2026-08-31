@@ -140,7 +140,7 @@ export default async function SaleDetailPage({
     data: outlet,
   } =
     await supabase
-      .from('outlets')
+      .from('outlets_secure')
       .select(`
         id,
         code,

@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
+type PermissionRow = {
+  module_code: string
+  can_view: boolean
+  can_create: boolean
+  can_update: boolean
+  can_post: boolean
+  can_approve: boolean
+}
+
 export default async function OutletsPage() {
   const supabase = await createClient()
 
@@ -13,8 +22,26 @@ export default async function OutletsPage() {
     redirect('/login')
   }
 
+  const { data: permissionData } = await supabase.rpc(
+    'get_my_permissions'
+  )
+
+  const permissions = (permissionData || []) as PermissionRow[]
+
+  const outletPermission = permissions.find(
+    (row) => row.module_code === 'OUTLETS'
+  )
+
+  const canCreate = Boolean(
+    outletPermission?.can_create
+  )
+
+  const canUpdate = Boolean(
+    outletPermission?.can_update
+  )
+
   const { data: outlets, error } = await supabase
-    .from('outlets')
+    .from('outlets_secure')
     .select(`
       id,
       code,
@@ -22,6 +49,7 @@ export default async function OutletsPage() {
       type,
       address,
       phone,
+      timezone,
       is_active,
       created_at
     `)
@@ -31,7 +59,7 @@ export default async function OutletsPage() {
     <main className="min-h-screen bg-zinc-100 p-8 text-zinc-900">
       <div className="mx-auto max-w-7xl">
 
-        <div className="mb-8 flex items-end justify-between">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <Link
               href="/dashboard"
@@ -53,12 +81,14 @@ export default async function OutletsPage() {
             </p>
           </div>
 
-          <Link
-            href="/dashboard/outlets/new"
-            className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
-          >
-            + Add Outlet
-          </Link>
+          {canCreate && (
+            <Link
+              href="/dashboard/outlets/new"
+              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+            >
+              + Add Outlet
+            </Link>
+          )}
         </div>
 
         {error && (
@@ -68,68 +98,82 @@ export default async function OutletsPage() {
         )}
 
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
 
-            <thead className="bg-zinc-50 text-zinc-500">
-              <tr>
-                <th className="px-6 py-4">Code</th>
-                <th className="px-6 py-4">Name</th>
-                <th className="px-6 py-4">Type</th>
-                <th className="px-6 py-4">Address</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Action</th>
-              </tr>
-            </thead>
+              <thead className="bg-zinc-50 text-zinc-500">
+                <tr>
+                  <th className="px-6 py-4">Code</th>
+                  <th className="px-6 py-4">Name</th>
+                  <th className="px-6 py-4">Type</th>
+                  <th className="px-6 py-4">Address</th>
+                  <th className="px-6 py-4">Timezone</th>
+                  <th className="px-6 py-4">Status</th>
 
-            <tbody className="divide-y divide-zinc-100">
-
-              {outlets?.map((outlet) => (
-                <tr key={outlet.id} className="hover:bg-zinc-50">
-
-                  <td className="px-6 py-4 font-semibold text-red-900">
-                    {outlet.code}
-                  </td>
-
-                  <td className="px-6 py-4 font-medium">
-                    {outlet.name}
-                  </td>
-
-                  <td className="px-6 py-4">
-                    {outlet.type === 'CENTRAL_KITCHEN'
-                      ? 'Central Kitchen'
-                      : 'Outlet'}
-                  </td>
-
-                  <td className="px-6 py-4 text-zinc-500">
-                    {outlet.address || '-'}
-                  </td>
-
-                  <td className="px-6 py-4">
-                    {outlet.is_active ? (
-                      <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-500">
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="px-6 py-4 text-right">
-                    <Link
-                      href={`/dashboard/outlets/${outlet.id}/edit`}
-                      className="font-semibold text-red-800 hover:underline"
-                    >
-                      Edit
-                    </Link>
-                  </td>
-
+                  {canUpdate && (
+                    <th className="px-6 py-4 text-right">
+                      Action
+                    </th>
+                  )}
                 </tr>
-              ))}
+              </thead>
 
-            </tbody>
-          </table>
+              <tbody className="divide-y divide-zinc-100">
+
+                {(outlets || []).map((outlet) => (
+                  <tr key={outlet.id} className="hover:bg-zinc-50">
+
+                    <td className="px-6 py-4 font-semibold text-red-900">
+                      {outlet.code}
+                    </td>
+
+                    <td className="px-6 py-4 font-medium">
+                      {outlet.name}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {outlet.type === 'CENTRAL_KITCHEN'
+                        ? 'Central Kitchen'
+                        : 'Outlet'}
+                    </td>
+
+                    <td className="px-6 py-4 text-zinc-500">
+                      {outlet.address || '-'}
+                    </td>
+
+                    <td className="px-6 py-4 text-zinc-500">
+                      {outlet.timezone || 'Asia/Jakarta'}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {outlet.is_active ? (
+                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-500">
+                          Inactive
+                        </span>
+                      )}
+                    </td>
+
+                    {canUpdate && (
+                      <td className="px-6 py-4 text-right">
+                        <Link
+                          href={`/dashboard/outlets/${outlet.id}/edit`}
+                          className="font-semibold text-red-800 hover:underline"
+                        >
+                          Edit
+                        </Link>
+                      </td>
+                    )}
+
+                  </tr>
+                ))}
+
+              </tbody>
+            </table>
+          </div>
 
           {!outlets?.length && (
             <div className="p-10 text-center text-zinc-500">
