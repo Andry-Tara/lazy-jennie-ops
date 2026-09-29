@@ -127,8 +127,10 @@ export default function UserAccessForm({
           'OUTLET_MANAGER',
           'CASHIER',
           'INVENTORY_STAFF',
+          'KITCHEN_STAFF',
           'CK_MANAGER',
           'CK_STAFF',
+          'WAITER',
         ].includes(
           selectedRole.code
         )
@@ -144,14 +146,35 @@ export default function UserAccessForm({
         )
       : false
 
+  const isRestaurantOutletRole =
+    selectedRole
+      ? [
+          'WAITER',
+          'KITCHEN_STAFF',
+        ].includes(
+          selectedRole.code
+        )
+      : false
+
+
   const visibleOutlets =
     isCKRole
+
       ? outlets.filter(
           (outlet) =>
             outlet.type ===
             'CENTRAL_KITCHEN'
         )
-      : outlets
+
+      : isRestaurantOutletRole
+
+        ? outlets.filter(
+            (outlet) =>
+              outlet.type ===
+              'OUTLET'
+          )
+
+        : outlets
 
   // =====================================================
   // ROLE CHANGE

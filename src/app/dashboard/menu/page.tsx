@@ -11,6 +11,9 @@ import Link from 'next/link'
 import MenuPhotoUploader
   from './MenuPhotoUploader'
 
+import SalesOnlyMenuMaster
+  from './SalesOnlyMenuMaster'
+
 
 export default async function MenuPage() {
 
@@ -33,6 +36,263 @@ export default async function MenuPage() {
 
   if (!user) {
     redirect('/login')
+  }
+
+
+  // =====================================================
+  // RANGKA SALES ONLY MENU MASTER
+  // =====================================================
+
+  const {
+    data: userProfile,
+  } =
+    await supabase
+      .from('profiles')
+      .select(`
+        outlet_id,
+        is_active
+      `)
+      .eq(
+        'id',
+        user.id
+      )
+      .maybeSingle()
+
+
+  if (
+    userProfile?.outlet_id &&
+    userProfile.is_active !== false
+  ) {
+
+    const {
+      data: appProfile,
+    } =
+      await supabase
+        .from(
+          'outlet_app_profiles_secure'
+        )
+        .select(`
+          brand_name,
+          inventory_enabled,
+          menu_master_enabled
+        `)
+        .eq(
+          'outlet_id',
+          userProfile.outlet_id
+        )
+        .maybeSingle()
+
+
+    const salesOnly =
+      Boolean(
+        appProfile &&
+        appProfile.menu_master_enabled &&
+        appProfile.inventory_enabled === false
+      )
+
+
+    if (salesOnly) {
+
+      const {
+        data: outlet,
+      } =
+        await supabase
+          .from(
+            'outlets_secure'
+          )
+          .select(`
+            code,
+            name
+          `)
+          .eq(
+            'id',
+            userProfile.outlet_id
+          )
+          .maybeSingle()
+
+
+      const {
+        data: routes,
+        error: routeError,
+      } =
+        await supabase
+          .from(
+            'menu_kitchen_routes_secure'
+          )
+          .select(`
+            menu_item_id,
+            station,
+            is_active
+          `)
+          .eq(
+            'outlet_id',
+            userProfile.outlet_id
+          )
+
+
+      if (routeError) {
+
+        return (
+          <main className="min-h-screen bg-zinc-100 p-8">
+            <div className="mx-auto max-w-5xl rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
+              {routeError.message}
+            </div>
+          </main>
+        )
+
+      }
+
+
+      const routeRows =
+        routes || []
+
+
+      const menuIds =
+        Array.from(
+          new Set(
+            routeRows.map(
+              row =>
+                row.menu_item_id
+            )
+          )
+        )
+
+
+      let menuRows: any[] = []
+
+
+      if (menuIds.length > 0) {
+
+        const {
+          data,
+          error: menuQueryError,
+        } =
+          await supabase
+            .from(
+              'menu_items'
+            )
+            .select(`
+              id,
+              code,
+              name,
+              category,
+              selling_price,
+              image_url,
+              is_active
+            `)
+            .in(
+              'id',
+              menuIds
+            )
+            .order(
+              'category'
+            )
+            .order(
+              'name'
+            )
+
+
+        if (menuQueryError) {
+
+          return (
+            <main className="min-h-screen bg-zinc-100 p-8">
+              <div className="mx-auto max-w-5xl rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
+                {menuQueryError.message}
+              </div>
+            </main>
+          )
+
+        }
+
+
+        menuRows =
+          data || []
+
+      }
+
+
+      const routeMap =
+        new Map(
+          routeRows.map(
+            row => [
+              row.menu_item_id,
+              row,
+            ]
+          )
+        )
+
+
+      return (
+        <SalesOnlyMenuMaster
+
+          brandName={
+            appProfile?.brand_name ||
+            outlet?.name ||
+            'Restaurant'
+          }
+
+          outletCode={
+            outlet?.code ||
+            ''
+          }
+
+          menus={
+            menuRows.map(
+              menu => {
+
+                const route =
+                  routeMap.get(
+                    menu.id
+                  )
+
+
+                return {
+                  id:
+                    menu.id,
+
+                  code:
+                    menu.code,
+
+                  name:
+                    menu.name,
+
+                  category:
+                    menu.category,
+
+                  selling_price:
+                    Number(
+                      menu.selling_price ||
+                      0
+                    ),
+
+                  image_url:
+                    menu.image_url ||
+                    null,
+
+                  is_active:
+                    Boolean(
+                      menu.is_active
+                    ),
+
+                  station:
+                    String(
+                      route?.station ||
+                      'KITCHEN'
+                    ).toUpperCase(),
+
+                  route_active:
+                    route?.is_active !==
+                    false,
+                }
+
+              }
+            )
+          }
+        />
+      )
+
+    }
+
   }
 
 

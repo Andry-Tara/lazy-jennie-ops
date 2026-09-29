@@ -305,6 +305,13 @@ export default async function InventoryPage({
           <div className="flex flex-wrap gap-3">
 
             <Link
+              href="/dashboard/inventory/opening-balance"
+              className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900"
+            >
+              Opening Balance
+            </Link>
+
+            <Link
               href="/dashboard/inventory/movements"
               className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold"
             >

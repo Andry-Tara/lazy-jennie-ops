@@ -69,7 +69,7 @@ export default async function OutletsPage() {
             </Link>
 
             <p className="mt-5 text-sm font-bold tracking-wider text-red-800">
-              LAZY JENNIE
+              RESTAURANT OPERATIONS
             </p>
 
             <h1 className="mt-2 text-3xl font-bold">
@@ -81,14 +81,27 @@ export default async function OutletsPage() {
             </p>
           </div>
 
-          {canCreate && (
+          <div className="flex flex-wrap gap-3">
+
             <Link
-              href="/dashboard/outlets/new"
-              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+              href="/dashboard/pos/tables"
+              className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
             >
-              + Add Outlet
+              Master Tables
             </Link>
-          )}
+
+            {canCreate && (
+
+              <Link
+                href="/dashboard/outlets/new"
+                className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+              >
+                + Add Outlet
+              </Link>
+
+            )}
+
+          </div>
         </div>
 
         {error && (

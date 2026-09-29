@@ -7,6 +7,9 @@ import {
 } from 'next/navigation'
 
 import Link from 'next/link'
+import DashboardLogoutButton from '@/components/auth/DashboardLogoutButton'
+
+import RangkaDashboard from '@/components/rangka/RangkaDashboard'
 
 
 type SearchParams = Promise<{
@@ -25,6 +28,8 @@ type PermissionRow = {
 
 
 type ModuleCode =
+  | 'WAITER'
+  | 'KITCHEN'
   | 'POS'
   | 'SALES_HISTORY'
   | 'SALES_REPORT'
@@ -207,6 +212,41 @@ export default async function DashboardPage({
 
 
   // =====================================================
+  // WAITER HOME
+  // =====================================================
+
+  if (
+    roleCode ===
+    'WAITER'
+  ) {
+
+    redirect(
+      '/dashboard/waiter'
+    )
+
+  }
+
+
+
+  // =====================================================
+  // KITCHEN HOME
+  // Pure kitchen role enters KDS directly.
+  // =====================================================
+
+  if (
+    roleCode ===
+    'KITCHEN_STAFF'
+  ) {
+
+    redirect(
+      '/dashboard/kitchen'
+    )
+
+  }
+
+
+
+  // =====================================================
   // OUTLET
   // =====================================================
 
@@ -299,11 +339,116 @@ export default async function DashboardPage({
 
 
   // =====================================================
+  // GLOBAL OPERATION FEATURE FLAGS
+  //
+  // Global users such as SUPER_ADMIN may have no outlet_id.
+  // Show operational cards when at least one accessible outlet
+  // has the corresponding feature enabled.
+  // =====================================================
+
+  const {
+    data:
+      operationProfiles,
+  } =
+    await supabase
+      .from(
+        'outlet_app_profiles_secure'
+      )
+      .select(`
+        outlet_id,
+        waiter_mode_enabled,
+        kds_enabled
+      `)
+
+
+  const globalWaiterFeatureEnabled =
+    (
+      operationProfiles ||
+      []
+    ).some(
+      (row) =>
+        Boolean(
+          row.waiter_mode_enabled
+        )
+    )
+
+
+  const globalKitchenFeatureEnabled =
+    (
+      operationProfiles ||
+      []
+    ).some(
+      (row) =>
+        Boolean(
+          row.kds_enabled
+        )
+    )
+
+
+
+  // =====================================================
   // OPERATIONS CARDS
   // =====================================================
 
   const operations:
     DashboardCard[] = [
+
+    ...(
+      globalWaiterFeatureEnabled
+
+        ? [
+            {
+              title:
+                'Waiter Mode',
+
+              description:
+                'Table Service, Order Taking & Additional Orders',
+
+              href:
+                '/dashboard/waiter',
+
+              icon:
+                '🍽️',
+
+              permission:
+                'WAITER' as ModuleCode,
+
+              action:
+                'Open Waiter Mode',
+            },
+          ]
+
+        : []
+    ),
+
+
+    ...(
+      globalKitchenFeatureEnabled
+
+        ? [
+            {
+              title:
+                'Kitchen Display',
+
+              description:
+                'Kitchen & Bar Queue, Notes and Item Readiness',
+
+              href:
+                '/dashboard/kitchen',
+
+              icon:
+                '👨‍🍳',
+
+              permission:
+                'KITCHEN' as ModuleCode,
+
+              action:
+                'Open Kitchen Display',
+            },
+          ]
+
+        : []
+    ),
 
     {
       title:
@@ -767,28 +912,102 @@ export default async function DashboardPage({
   // PAGE
   // =====================================================
 
+
+  // =====================================================
+  // RANGKA GO-LIVE PROFILE
+  // =====================================================
+
+  let outletAppProfile: any =
+    null
+
+
+  if (
+    profile?.outlet_id
+  ) {
+
+    const {
+      data,
+    } =
+      await supabase
+        .from(
+          'outlet_app_profiles_secure'
+        )
+        .select('*')
+        .eq(
+          'outlet_id',
+          profile.outlet_id
+        )
+        .maybeSingle()
+
+
+    outletAppProfile =
+      data
+
+  }
+
+
+  if (
+    outletAppProfile?.profile_code ===
+      'RANGKA_GO_LIVE'
+  ) {
+
+    return (
+      <RangkaDashboard
+        fullName={
+          profile?.full_name ||
+          ''
+        }
+        email={
+          profile?.email ||
+          user.email ||
+          ''
+        }
+        roleName={
+          roleName
+        }
+        roleCode={
+          roleCode
+        }
+        outletCode={
+          outletCode
+        }
+        outletName={
+          outletName
+        }
+      />
+    )
+
+  }
+
+
   return (
 
     <main className="min-h-screen bg-zinc-100 p-8 text-zinc-900">
-
-      <div className="mx-auto max-w-7xl">
+<div className="mx-auto max-w-7xl">
 
 
         {/* HEADER */}
 
-        <div className="mb-10">
+        <div className="mb-10 flex flex-wrap items-start justify-between gap-5">
 
-          <p className="text-sm font-bold tracking-wider text-red-800">
-            LAZY JENNIE
-          </p>
+          <div>
 
-          <h1 className="mt-2 text-4xl font-bold">
-            Operations Dashboard
-          </h1>
+            <p className="text-sm font-bold tracking-wider text-red-800">
+              LAZY JENNIE
+            </p>
 
-          <p className="mt-2 text-zinc-500">
-            Inventory, Central Kitchen, Purchasing, POS & Outlet Operations
-          </p>
+            <h1 className="mt-2 text-4xl font-bold">
+              Operations Dashboard
+            </h1>
+
+            <p className="mt-2 text-zinc-500">
+              Inventory, Central Kitchen, Purchasing, POS & Outlet Operations
+            </p>
+
+          </div>
+
+
+          <DashboardLogoutButton />
 
         </div>
 

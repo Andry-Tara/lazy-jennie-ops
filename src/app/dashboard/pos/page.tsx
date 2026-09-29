@@ -7,10 +7,6 @@ export default async function POSPage() {
   const supabase =
     await createClient()
 
-  // =====================================================
-  // AUTH
-  // =====================================================
-
   const {
     data: { user },
   } =
@@ -19,10 +15,6 @@ export default async function POSPage() {
   if (!user) {
     redirect('/login')
   }
-
-  // =====================================================
-  // PROFILE
-  // =====================================================
 
   const {
     data: profile,
@@ -45,10 +37,6 @@ export default async function POSPage() {
     redirect('/dashboard')
   }
 
-  // =====================================================
-  // ROLE
-  // =====================================================
-
   let roleCode = ''
 
   if (profile?.role_id) {
@@ -68,6 +56,62 @@ export default async function POSPage() {
     roleCode =
       role?.code || ''
   }
+
+  // =====================================================
+  // RANGKA POS PROFILE BRANDING
+  // =====================================================
+
+  let appProfile:
+    {
+      brand_name: string | null
+      inventory_enabled: boolean
+      pos_enabled: boolean
+    }
+    | null =
+      null
+
+
+  if (
+    profile?.outlet_id
+  ) {
+
+    const {
+      data,
+    } =
+      await supabase
+        .from(
+          'outlet_app_profiles_secure'
+        )
+        .select(`
+          brand_name,
+          inventory_enabled,
+          pos_enabled
+        `)
+        .eq(
+          'outlet_id',
+          profile.outlet_id
+        )
+        .maybeSingle()
+
+
+    appProfile =
+      data
+
+  }
+
+
+  const salesOnlyProfile =
+    Boolean(
+      appProfile &&
+      appProfile.inventory_enabled ===
+        false
+    )
+
+
+  const posBrandName =
+    appProfile?.brand_name ||
+    'LAZY JENNIE'
+
 
   const allowedRoles = [
     'SUPER_ADMIN',
@@ -96,7 +140,9 @@ export default async function POSPage() {
           <div className="mt-8 rounded-2xl bg-white p-8 shadow-sm">
 
             <p className="text-sm font-bold tracking-wider text-red-800">
-              LAZY JENNIE
+              {
+                posBrandName.toUpperCase()
+              }
             </p>
 
             <h1 className="mt-3 text-2xl font-bold">
@@ -114,10 +160,6 @@ export default async function POSPage() {
       </main>
     )
   }
-
-  // =====================================================
-  // OUTLETS
-  // =====================================================
 
   const {
     data: outletData,
@@ -151,30 +193,157 @@ export default async function POSPage() {
     )
 
   // =====================================================
-  // MENUS
+  // SALES ONLY POS MENU SCOPE
   // =====================================================
 
-  const {
-    data: menuData,
-    error: menuError,
-  } =
-    await supabase
-      .from('menu_items')
-      .select(`
-        id,
-        code,
-        name,
-        category,
-        selling_price,
-        low_stock_portions,
-        image_url
-      `)
-      .eq(
-        'is_active',
-        true
-      )
-      .order('category')
-      .order('name')
+  let menuData: any[] = []
+
+  let menuError:
+    {
+      message: string
+    }
+    | null =
+      null
+
+
+  if (
+    salesOnlyProfile &&
+    profile?.outlet_id
+  ) {
+
+    const {
+      data:
+        routeRows,
+      error:
+        routeError,
+    } =
+      await supabase
+        .from(
+          'menu_kitchen_routes_secure'
+        )
+        .select(`
+          menu_item_id
+        `)
+        .eq(
+          'outlet_id',
+          profile.outlet_id
+        )
+        .eq(
+          'is_active',
+          true
+        )
+
+
+    if (routeError) {
+
+      menuError =
+        routeError
+
+    } else {
+
+      const routeMenuIds =
+        Array.from(
+          new Set(
+            (
+              routeRows ||
+              []
+            ).map(
+              row =>
+                row.menu_item_id
+            )
+          )
+        )
+
+
+      if (
+        routeMenuIds.length >
+        0
+      ) {
+
+        const {
+          data,
+          error,
+        } =
+          await supabase
+            .from(
+              'menu_items'
+            )
+            .select(`
+              id,
+              code,
+              name,
+              category,
+              selling_price,
+              low_stock_portions,
+              image_url
+            `)
+            .in(
+              'id',
+              routeMenuIds
+            )
+            .eq(
+              'is_active',
+              true
+            )
+            .order(
+              'category'
+            )
+            .order(
+              'name'
+            )
+
+
+        menuData =
+          data ||
+          []
+
+        menuError =
+          error
+
+      }
+
+    }
+
+  } else {
+
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .from(
+          'menu_items'
+        )
+        .select(`
+          id,
+          code,
+          name,
+          category,
+          selling_price,
+          low_stock_portions,
+          image_url
+        `)
+        .eq(
+          'is_active',
+          true
+        )
+        .order(
+          'category'
+        )
+        .order(
+          'name'
+        )
+
+
+    menuData =
+      data ||
+      []
+
+    menuError =
+      error
+
+  }
+
 
   const menus =
     (menuData || []).map(
@@ -209,8 +378,45 @@ export default async function POSPage() {
     )
 
   // =====================================================
-  // DEFAULT OUTLET
+  // UNIFIED ORDER TABLE MASTER
   // =====================================================
+
+  const {
+    data: restaurantTableData,
+  } =
+    await supabase
+      .from('restaurant_tables_secure')
+      .select(`
+        id,
+        outlet_id,
+        code,
+        name,
+        capacity,
+        status,
+        is_active
+      `)
+      .eq('is_active', true)
+      .order('code')
+
+  const restaurantTables =
+    (restaurantTableData || []).map(
+      (table) => ({
+        id: table.id,
+        outlet_id: table.outlet_id,
+        code: table.code || '',
+        name: table.name || '',
+        capacity: Number(
+          table.capacity || 0
+        ),
+        status:
+          table.status || '',
+        is_active:
+          Boolean(
+            table.is_active
+          ),
+      })
+    )
+
 
   let defaultOutletId =
     ''
@@ -227,10 +433,6 @@ export default async function POSPage() {
       outlets[0].id
   }
 
-  // =====================================================
-  // OVERRIDE ACCESS
-  // =====================================================
-
   const canOverride =
     [
       'SUPER_ADMIN',
@@ -239,10 +441,6 @@ export default async function POSPage() {
     ].includes(
       roleCode
     )
-
-  // =====================================================
-  // TODAY JAKARTA
-  // =====================================================
 
   const today =
     new Intl.DateTimeFormat(
@@ -269,8 +467,6 @@ export default async function POSPage() {
 
       <div className="mx-auto max-w-[1600px]">
 
-        {/* HEADER */}
-
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
 
           <div>
@@ -283,7 +479,9 @@ export default async function POSPage() {
             </Link>
 
             <p className="mt-5 text-sm font-bold tracking-wider text-red-800">
-              LAZY JENNIE
+              {
+                posBrandName.toUpperCase()
+              }
             </p>
 
             <h1 className="mt-2 text-3xl font-bold">
@@ -291,12 +489,48 @@ export default async function POSPage() {
             </h1>
 
             <p className="mt-2 text-zinc-500">
-              Sales, Stock Consumption & Actual COGS
+              {
+                salesOnlyProfile
+                  ? 'Restaurant POS, orders & payments'
+                  : 'Sales, Stock Consumption & Actual COGS'
+              }
             </p>
 
           </div>
 
           <div className="flex flex-wrap gap-3">
+
+            <Link
+              href="/dashboard/pos/control"
+              className="rounded-xl bg-red-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-800"
+            >
+              POS Control
+            </Link>
+
+            <Link
+              href="/dashboard/pos/orders"
+              className="rounded-xl bg-zinc-950 px-5 py-3 text-sm font-semibold text-white hover:bg-zinc-800"
+            >
+              Open Orders
+            </Link>
+
+            {canOverride && (
+              <Link
+                href="/dashboard/pos/approvals"
+                className="rounded-xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+              >
+                Approval Queue
+              </Link>
+            )}
+
+            {canOverride && (
+              <Link
+                href="/dashboard/pos/settings"
+                className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
+              >
+                Discount Settings
+              </Link>
+            )}
 
             <Link
               href="/dashboard/menu"
@@ -305,12 +539,16 @@ export default async function POSPage() {
               Menu Master
             </Link>
 
-            <Link
-              href="/dashboard/costing"
-              className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
-            >
-              COGS & Costing
-            </Link>
+            {!salesOnlyProfile && (
+
+              <Link
+                href="/dashboard/costing"
+                className="rounded-xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-zinc-50"
+              >
+                COGS & Costing
+              </Link>
+
+            )}
 
           </div>
 
@@ -340,6 +578,7 @@ export default async function POSPage() {
         <POSClient
           outlets={outlets}
           menus={menus}
+          restaurantTables={restaurantTables}
           defaultOutletId={
             defaultOutletId
           }
@@ -348,6 +587,7 @@ export default async function POSPage() {
           canOverride={
             canOverride
           }
+          salesOnlyProfile={salesOnlyProfile}
         />
 
       </div>

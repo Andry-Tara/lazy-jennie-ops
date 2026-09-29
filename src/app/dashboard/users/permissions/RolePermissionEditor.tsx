@@ -89,6 +89,29 @@ const MODULES = [
   },
 
   {
+    code: 'WAITER',
+    name: 'Waiter Mode',
+    section: 'Sales',
+    actions: [
+      'can_view',
+      'can_create',
+      'can_update',
+      'can_post',
+    ],
+  },
+
+  {
+    code: 'KITCHEN',
+    name: 'Kitchen Display',
+    section: 'Operations',
+    actions: [
+      'can_view',
+      'can_update',
+      'can_post',
+    ],
+  },
+
+  {
     code: 'SALES_HISTORY',
     name: 'Sales History',
     section: 'Sales',

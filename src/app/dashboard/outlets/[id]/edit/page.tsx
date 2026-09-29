@@ -134,7 +134,7 @@ export default async function EditOutletPage({ params }: Props) {
 
         <div className="mt-6">
           <p className="text-sm font-bold tracking-wider text-red-800">
-            LAZY JENNIE
+            RESTAURANT OPERATIONS
           </p>
 
           <h1 className="mt-2 text-3xl font-bold">
@@ -144,6 +144,13 @@ export default async function EditOutletPage({ params }: Props) {
           <p className="mt-2 text-zinc-500">
             {outlet.name}
           </p>
+
+          <Link
+            href={`/dashboard/pos/tables?outlet=${outlet.id}`}
+            className="mt-4 inline-flex rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-zinc-50"
+          >
+            Manage Tables
+          </Link>
         </div>
 
         <form
