@@ -1,9 +1,20 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from '@capacitor/cli'
+
+const serverUrl = process.env.CAP_SERVER_URL?.trim()
 
 const config: CapacitorConfig = {
   appId: 'com.hometech.pos',
   appName: 'HomeTech POS',
-  webDir: 'www'
-};
+  webDir: 'www',
 
-export default config;
+  ...(serverUrl
+    ? {
+        server: {
+          url: serverUrl,
+          cleartext: serverUrl.startsWith('http://'),
+        },
+      }
+    : {}),
+}
+
+export default config
