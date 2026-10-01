@@ -1208,13 +1208,13 @@ export default function POSClient({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_360px]">
 
       <div>
 
-        <div className="mb-6 rounded-2xl bg-white p-5 shadow-sm">
+        <div className="mb-3 rounded-xl bg-white p-3 shadow-sm">
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-2 md:grid-cols-3">
 
             <div>
 
@@ -1349,7 +1349,7 @@ export default function POSClient({
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 2xl:grid-cols-4">
 
           {filteredMenus.map(
             (menu) => {
@@ -1404,11 +1404,11 @@ export default function POSClient({
                     ) ||
                     unavailableForCashier
                   }
-                  className="rounded-2xl bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl bg-white p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                 >
 
                   <div
-                    className="mb-4 aspect-[4/3] w-full overflow-hidden rounded-xl bg-zinc-100 bg-cover bg-center"
+                    className="mb-2 aspect-[4/3] w-full overflow-hidden rounded-lg bg-zinc-100 bg-cover bg-center bg-no-repeat"
                     style={
                       menu.image_url
                         ? {
@@ -1423,11 +1423,11 @@ export default function POSClient({
 
                         <div className="text-center">
 
-                          <div className="text-5xl">
+                          <div className="text-2xl">
                             🍽️
                           </div>
 
-                          <p className="mt-2 text-xs text-zinc-400">
+                          <p className="mt-1 text-[10px] text-zinc-400">
                             Menu Photo
                           </p>
 
@@ -1445,13 +1445,14 @@ export default function POSClient({
                         {menu.code}
                       </p>
 
-                      <h3 className="mt-1 text-lg font-bold">
+                      <h3 className="mt-0.5 text-sm font-black leading-tight">
                         {menu.name}
                       </h3>
 
                     </div>
 
-                    <span
+                    {!salesOnlyProfile && (
+<span
                       className={`rounded-full px-3 py-1 text-[10px] font-bold ${statusStyle(
                         status
                       )}`}
@@ -1460,15 +1461,16 @@ export default function POSClient({
                         status
                       )}
                     </span>
+                  )}
 
                   </div>
 
-                  <p className="mt-2 text-sm text-zinc-500">
+                  <p className="mt-1 text-[11px] text-zinc-500">
                     {menu.category ||
                       'Uncategorized'}
                   </p>
 
-                  <p className="mt-5 text-xl font-bold text-red-900">
+                  <p className="mt-2 text-sm font-black text-red-900">
                     {formatRupiah(
                       Number(
                         menu.selling_price
@@ -1476,7 +1478,8 @@ export default function POSClient({
                     )}
                   </p>
 
-                  <div className="mt-5 border-t border-zinc-100 pt-4">
+                  {!salesOnlyProfile && (
+<div className="mt-2 border-t border-zinc-100 pt-2">
 
                     <p className="text-xs text-zinc-400">
                       {
@@ -1508,6 +1511,7 @@ export default function POSClient({
                     )}
 
                   </div>
+                  )}
 
                 </button>
               )
@@ -1541,19 +1545,19 @@ export default function POSClient({
 
       <div>
 
-        <div className="sticky top-6 rounded-2xl bg-white shadow-sm">
+        <div className={salesOnlyProfile ? 'sticky top-3 flex h-[calc(100dvh-6rem)] min-h-0 flex-col overflow-hidden rounded-xl bg-white shadow-sm' : 'sticky top-3 rounded-xl bg-white shadow-sm'}>
 
-          <div className="border-b border-zinc-200 p-5">
+          <div className={salesOnlyProfile ? 'shrink-0 border-b border-zinc-200 p-3' : 'border-b border-zinc-200 p-3'}>
 
             <div className="flex items-center justify-between">
 
               <div>
 
-                <h2 className="text-xl font-bold">
+                <h2 className="text-base font-black">
                   Current Order
                 </h2>
 
-                <p className="mt-1 text-xs text-zinc-400">
+                <p className={salesOnlyProfile ? 'hidden' : 'mt-1 text-xs text-zinc-400'}>
                   {today}
                 </p>
 
@@ -1576,12 +1580,170 @@ export default function POSClient({
 
           </div>
 
-          <div className="max-h-[340px] overflow-y-auto">
+          {salesOnlyProfile && (
+            <div className="shrink-0 border-b border-zinc-200 bg-zinc-50/70 px-3 py-2">
+
+              <div className="flex items-center gap-2">
+
+                <div className="inline-flex min-w-0 flex-1 rounded-lg bg-white p-1 ring-1 ring-zinc-200">
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOrderType(
+                        'DINE_IN'
+                      )
+                    }
+                    className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-black ${
+                      orderType ===
+                      'DINE_IN'
+                        ? 'bg-zinc-950 text-white'
+                        : 'text-zinc-600'
+                    }`}
+                  >
+                    Dine In
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOrderType(
+                        'TAKEAWAY'
+                      )
+
+                      setSelectedTableId(
+                        ''
+                      )
+                    }}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-[11px] font-black ${
+                      orderType ===
+                      'TAKEAWAY'
+                        ? 'bg-zinc-950 text-white'
+                        : 'text-zinc-600'
+                    }`}
+                  >
+                    Takeaway
+                  </button>
+
+                </div>
+
+                {shiftLoading ? (
+                  <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-1.5 text-[10px] font-bold text-zinc-500">
+                    Shift...
+                  </span>
+                ) : hasMatchingShift ? (
+                  <Link
+                    href="/dashboard/pos/closing"
+                    title={
+                      openCashierShift?.shift_no ||
+                      'Shift Open'
+                    }
+                    className="shrink-0 rounded-full bg-green-100 px-2 py-1.5 text-[10px] font-black text-green-700"
+                  >
+                    ● Shift Open
+                  </Link>
+                ) : (
+                  <Link
+                    href="/dashboard/pos/closing"
+                    className="shrink-0 rounded-full bg-red-100 px-2 py-1.5 text-[10px] font-black text-red-700"
+                  >
+                    Shift Required
+                  </Link>
+                )}
+
+              </div>
+
+              {orderType ===
+                'DINE_IN' && (
+
+                <div className="mt-2 flex items-center gap-2">
+
+                  <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-zinc-500">
+                    Table
+                  </span>
+
+                  <select
+                    value={
+                      selectedTableId
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setSelectedTableId(
+                        event.target.value
+                      )
+                    }
+                    className="min-w-0 flex-1 rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-xs"
+                  >
+
+                    <option value="">
+                      Select Table
+                    </option>
+
+                    {outletTables.map(
+                      (table) => (
+
+                        <option
+                          key={
+                            table.id
+                          }
+                          value={
+                            table.id
+                          }
+                          disabled={
+                            table.status !==
+                            'AVAILABLE'
+                          }
+                        >
+                          {table.code}
+                          {' - '}
+                          {table.name}
+                          {table.status !==
+                            'AVAILABLE'
+                            ? ` · ${table.status}`
+                            : ''}
+                        </option>
+
+                      )
+                    )}
+
+                  </select>
+
+                </div>
+
+              )}
+
+              <details className="mt-1.5">
+
+                <summary className="cursor-pointer select-none text-[10px] font-bold text-zinc-500">
+                  + Order note
+                </summary>
+
+                <textarea
+                  rows={1}
+                  value={notes}
+                  onChange={(
+                    event
+                  ) =>
+                    setNotes(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Optional order notes"
+                  className="mt-1.5 w-full resize-none rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-xs"
+                />
+
+              </details>
+
+            </div>
+          )}
+
+          <div className={salesOnlyProfile ? 'min-h-0 flex-1 overflow-y-auto' : 'max-h-[140px] overflow-y-auto'}>
 
             {cart.length ===
             0 ? (
 
-              <div className="p-10 text-center">
+              <div className="p-5 text-center">
 
                 <p className="font-semibold">
                   Cart Empty
@@ -1617,7 +1779,7 @@ export default function POSClient({
                         key={
                           row.menu_item_id
                         }
-                        className="p-5"
+                        className="px-3 py-2.5"
                       >
 
                         <div className="flex items-start justify-between gap-4">
@@ -1653,7 +1815,7 @@ export default function POSClient({
 
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between">
+                        <div className="mt-2 flex items-center justify-between">
 
                           <div className="flex items-center gap-2">
 
@@ -1664,7 +1826,7 @@ export default function POSClient({
                                   row.menu_item_id
                                 )
                               }
-                              className="h-9 w-9 rounded-lg border border-zinc-300 font-bold"
+                              className="h-10 w-10 rounded-lg border border-zinc-300 text-base font-black"
                             >
                               −
                             </button>
@@ -1680,7 +1842,7 @@ export default function POSClient({
                                   row
                                 )
                               }
-                              className="h-9 w-9 rounded-lg border border-zinc-300 font-bold"
+                              className="h-10 w-10 rounded-lg border border-zinc-300 text-base font-black"
                             >
                               +
                             </button>
@@ -1701,13 +1863,15 @@ export default function POSClient({
 
                         </div>
 
-                      <div className="mt-3">
-                          <label className="mb-1.5 block text-[11px] font-black uppercase tracking-wide text-zinc-500">
-                            Kitchen Note
-                          </label>
+                      <details className="mt-2">
+                          <summary className="cursor-pointer select-none text-[10px] font-bold text-zinc-500">
+                            {row.notes.trim()
+                              ? 'Kitchen note added'
+                              : '+ Kitchen note'}
+                          </summary>
 
                           <textarea
-                            rows={2}
+                            rows={1}
                             value={
                               row.notes
                             }
@@ -1720,9 +1884,9 @@ export default function POSClient({
                               )
                             }
                             placeholder="Example: no spicy, sauce separate"
-                            className="w-full resize-none rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-zinc-800 outline-none focus:border-amber-400"
+                            className="mt-1.5 w-full resize-none rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-zinc-800 outline-none focus:border-amber-400"
                           />
-                        </div>
+                        </details>
 
                       </div>
 
@@ -1736,11 +1900,11 @@ export default function POSClient({
 
           </div>
 
-          <div className="border-t border-zinc-200 p-5">
+          <div className={salesOnlyProfile ? 'hidden' : 'border-t border-zinc-200 p-3'}>
 
             <div
               className={
-                `mb-4 rounded-xl border p-4 ${
+                `mb-1.5 rounded-lg border px-2.5 py-1.5 ${
                   shiftLoading
                     ? 'border-zinc-200 bg-zinc-50'
                     : hasMatchingShift
@@ -1758,23 +1922,23 @@ export default function POSClient({
 
               ) : hasMatchingShift ? (
 
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-2">
 
                   <div>
 
-                    <p className="text-xs font-black uppercase tracking-wide text-green-700">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
                       ● Shift Open
                     </p>
 
 
-                    <p className="mt-1 font-black">
+                    <p className="text-sm font-black leading-tight">
                       {
                         openCashierShift?.shift_no
                       }
                     </p>
 
 
-                    <p className="mt-1 text-xs text-green-700">
+                    <p className={salesOnlyProfile ? 'hidden' : 'mt-1 text-xs text-green-700'}>
                       {
                         openCashierShift?.outlet_name
                       }
@@ -1785,7 +1949,7 @@ export default function POSClient({
 
                   <Link
                     href="/dashboard/pos/closing"
-                    className="rounded-lg border border-green-200 bg-white px-3 py-2 text-xs font-black text-green-700"
+                    className="rounded-md border border-green-200 bg-white px-2 py-1 text-[10px] font-black text-green-700"
                   >
                     View Shift
                   </Link>
@@ -1839,18 +2003,18 @@ export default function POSClient({
               <div>
 
                 {/* UNIFIED_ORDER_POS_V1_UI */}
-                <div className="mb-5 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                <div className="mb-2 rounded-lg bg-zinc-50 p-2">
 
-                  <p className="text-sm font-bold text-zinc-900">
+                  <p className="text-xs font-black text-zinc-900">
                     Order Type
                   </p>
 
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className={salesOnlyProfile ? 'hidden' : 'mt-1 text-xs text-zinc-500'}>
                     Send to Kitchen creates an unpaid order.
                   </p>
 
 
-                  <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid grid-cols-2 gap-2">
 
                     <button
                       type="button"
@@ -1859,7 +2023,7 @@ export default function POSClient({
                           'DINE_IN'
                         )
                       }
-                      className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                      className={`rounded-lg border px-3 py-2 text-xs font-black ${
                         orderType ===
                         'DINE_IN'
                           ? 'border-zinc-950 bg-zinc-950 text-white'
@@ -1881,7 +2045,7 @@ export default function POSClient({
                           ''
                         )
                       }}
-                      className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                      className={`rounded-lg border px-3 py-2 text-xs font-black ${
                         orderType ===
                         'TAKEAWAY'
                           ? 'border-zinc-950 bg-zinc-950 text-white'
@@ -1897,9 +2061,9 @@ export default function POSClient({
                   {orderType ===
                     'DINE_IN' && (
 
-                    <div className="mt-4">
+                    <div className="mt-1.5">
 
-                      <label className="mb-2 block text-xs font-bold">
+                      <label className="mb-1 block text-[11px] font-black">
                         Table
                       </label>
 
@@ -1914,7 +2078,7 @@ export default function POSClient({
                             event.target.value
                           )
                         }
-                        className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3"
+                        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm"
                       >
 
                         <option value="">
@@ -1970,7 +2134,7 @@ export default function POSClient({
                 </div>
 
 
-                <label className="mb-2 block text-sm font-semibold">
+                <label className={salesOnlyProfile ? 'hidden' : 'mb-2 block text-sm font-semibold'}>
                   Payment Method
                 </label>
 
@@ -1986,7 +2150,7 @@ export default function POSClient({
                         .value
                     )
                   }
-                  className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+                  className={salesOnlyProfile ? 'hidden' : 'w-full rounded-xl border border-zinc-300 px-4 py-3'}
                 >
 
                   <option value="QRIS">
@@ -2013,7 +2177,7 @@ export default function POSClient({
 
               </div>
 
-              <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+              <div className={salesOnlyProfile ? 'hidden' : 'rounded-xl border border-red-100 bg-red-50 p-4'}>
 
                 <p className="text-sm font-bold text-red-900">
                   Controlled Discounts
@@ -2025,7 +2189,7 @@ export default function POSClient({
 
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className={salesOnlyProfile ? 'hidden' : 'grid grid-cols-2 gap-3'}>
 
                 <div>
 
@@ -2081,12 +2245,12 @@ export default function POSClient({
 
               <div>
 
-                <label className="mb-2 block text-sm font-semibold">
+                <label className="mb-1 block text-[11px] font-black">
                   Notes
                 </label>
 
                 <textarea
-                  rows={2}
+                  rows={1}
                   value={notes}
                   onChange={(
                     event
@@ -2097,7 +2261,7 @@ export default function POSClient({
                     )
                   }
                   placeholder="Optional order notes"
-                  className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-1.5 text-sm"
                 />
 
               </div>
@@ -2165,9 +2329,9 @@ export default function POSClient({
             </div>
           )}
 
-          <div className="border-t border-zinc-200 p-5">
+          <div className={salesOnlyProfile ? 'shrink-0 border-t border-zinc-200 bg-white px-3 py-3' : 'border-t border-zinc-200 px-3 py-2'}>
 
-            <div className="space-y-2 text-sm">
+            <div className={salesOnlyProfile ? 'hidden' : 'space-y-2 text-sm'}>
 
               <div className="flex justify-between">
                 <span className="text-zinc-500">
@@ -2204,23 +2368,19 @@ export default function POSClient({
 
             </div>
 
-            <div className="my-4 border-t border-zinc-200" />
+            <div className={salesOnlyProfile ? 'hidden' : 'my-2 border-t border-zinc-200'} />
 
-            <div className="flex items-end justify-between">
+            <div className={salesOnlyProfile ? 'flex items-center justify-between' : 'flex items-end justify-between'}>
 
-              <div>
+              <p className={salesOnlyProfile ? 'text-xs font-bold text-zinc-500' : 'text-sm text-zinc-500'}>
+                Grand Total
+              </p>
 
-                <p className="text-sm text-zinc-500">
-                  Grand Total
-                </p>
-
-                <p className="mt-1 text-2xl font-bold text-red-900">
-                  {formatRupiah(
-                    grandTotal
-                  )}
-                </p>
-
-              </div>
+              <p className={salesOnlyProfile ? 'text-xl font-black text-red-900' : 'text-lg font-black text-red-900'}>
+                {formatRupiah(
+                  grandTotal
+                )}
+              </p>
 
             </div>
 
@@ -2277,7 +2437,7 @@ export default function POSClient({
                   !selectedTableId
                 )
               }
-              className="mt-5 w-full rounded-xl bg-zinc-950 px-6 py-4 text-base font-bold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className={salesOnlyProfile ? 'mt-3 w-full rounded-lg bg-zinc-950 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50' : 'mt-2 w-full rounded-lg bg-zinc-950 px-4 py-2.5 text-sm font-black text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50'}
             >
               {
                 sendingOrder
@@ -2298,7 +2458,7 @@ posting ||
                 cart.length ===
                   0
               }
-              className="mt-5 w-full rounded-xl bg-red-900 px-6 py-4 text-lg font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className={salesOnlyProfile ? 'hidden' : 'mt-5 w-full rounded-xl bg-red-900 px-6 py-4 text-lg font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50'}
             >
               {posting
                 ? 'Posting Sale...'
