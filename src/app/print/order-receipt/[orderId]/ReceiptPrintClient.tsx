@@ -6,9 +6,28 @@ import {
   useEffect,
 } from 'react'
 
+import {
+  isAndroidNative,
+  printBluetoothReceipt,
+} from '@/lib/pos/bluetooth-printer'
+
+
+
+type PrinterSetting = {
+  device_name: string | null
+  connection_type: string
+  device_identifier: string | null
+  paper_width_mm: number
+  auto_print_after_payment: boolean
+  is_active: boolean
+}
+
 
 type Props = {
   receipt: any
+
+  printerSetting:
+    PrinterSetting | null
   items: any[]
   autoPrint: boolean
 }
@@ -106,9 +125,60 @@ function qty(
 
 export default function ReceiptPrintClient({
   receipt,
+  printerSetting,
   items,
   autoPrint,
 }: Props) {
+
+  async function printReceipt() {
+    try {
+      const bluetoothSelected =
+        isAndroidNative() &&
+        Boolean(
+          printerSetting
+            ?.is_active
+        ) &&
+        printerSetting
+          ?.connection_type ===
+          'ANDROID_BLUETOOTH'
+
+      if (
+        bluetoothSelected
+      ) {
+        const address =
+          printerSetting
+            ?.device_identifier
+            ?.trim() ||
+          ''
+
+        if (!address) {
+          throw new Error(
+            'Bluetooth printer belum memiliki device address. Pilih printer kembali di Printer Settings.'
+          )
+        }
+
+        await printBluetoothReceipt(
+          address,
+          receipt,
+          items
+        )
+
+        return
+      }
+
+      window.print()
+
+    } catch (error) {
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : 'Failed to print receipt.'
+      )
+
+    }
+  }
+
 
   useEffect(
     () => {
@@ -117,15 +187,13 @@ export default function ReceiptPrintClient({
         return
       }
 
-
       const timer =
         window.setTimeout(
           () => {
-            window.print()
+            void printReceipt()
           },
           350
         )
-
 
       return () =>
         window.clearTimeout(
@@ -136,8 +204,7 @@ export default function ReceiptPrintClient({
     [autoPrint]
   )
 
-
-  const table =
+const table =
     receipt.table_code
       ? (
           receipt.table_name
@@ -169,9 +236,9 @@ export default function ReceiptPrintClient({
 
         <button
           type="button"
-          onClick={() =>
-            window.print()
-          }
+          onClick={() => {
+            void printReceipt()
+          }}
         >
           PRINT RECEIPT
         </button>

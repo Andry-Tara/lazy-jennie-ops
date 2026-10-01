@@ -123,10 +123,41 @@ export default async function OrderReceiptPage({
     )
   }
 
+  const {
+    data:
+      printerSetting,
+  } =
+    await supabase
+      .from(
+        'pos_printer_settings_secure'
+      )
+      .select(`
+        outlet_id,
+        printer_role,
+        device_name,
+        connection_type,
+        device_identifier,
+        paper_width_mm,
+        auto_print_after_payment,
+        is_active
+      `)
+      .eq(
+        'outlet_id',
+        receipt.outlet_id
+      )
+      .eq(
+        'printer_role',
+        'RECEIPT'
+      )
+      .maybeSingle()
+
+
+
 
   return (
     <ReceiptPrintClient
       receipt={receipt}
+      printerSetting={printerSetting}
       items={itemRows || []}
       autoPrint={
         query.autoprint ===
