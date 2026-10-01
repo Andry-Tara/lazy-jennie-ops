@@ -355,7 +355,7 @@ export default function OrdersClient({
     historyPageSize,
     setHistoryPageSize,
   ] =
-    useState(9)
+    useState(12)
 
 
 
@@ -478,6 +478,27 @@ export default function OrdersClient({
       {
         dateStyle: 'medium',
         timeStyle: 'short',
+      }
+    ).format(
+      new Date(value)
+    )
+  }
+
+
+  function formatClock(
+    value: string
+  ) {
+    return new Intl.DateTimeFormat(
+      'id-ID',
+      {
+        timeZone:
+          'Asia/Jakarta',
+        hour:
+          '2-digit',
+        minute:
+          '2-digit',
+        hour12:
+          false,
       }
     ).format(
       new Date(value)
@@ -2443,11 +2464,11 @@ let autoPrintWindow:
 
 
   return (
-    <main className="min-h-screen bg-zinc-100 p-6 text-zinc-950">
+    <main className="min-h-screen bg-zinc-100 p-3 text-zinc-950 md:p-4">
 
       <div className="mx-auto max-w-[1700px]">
 
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
 
           <div>
 
@@ -2458,15 +2479,15 @@ let autoPrintWindow:
               ← Point of Sale
             </Link>
 
-            <p className="mt-4 text-xs font-black uppercase tracking-[0.18em] text-red-800">
+            <p className="mt-2 text-[10px] font-black uppercase tracking-[0.16em] text-red-800">
               Restaurant Operations
             </p>
 
-            <h1 className="mt-1 text-3xl font-black">
+            <h1 className="mt-0.5 text-2xl font-black">
               Open Orders & History
             </h1>
 
-            <p className="mt-2 text-sm text-zinc-500">
+            <p className="mt-1 text-xs text-zinc-500">
               Kitchen orders, table status and payment settlement.
             </p>
 
@@ -2477,7 +2498,7 @@ let autoPrintWindow:
 
             <Link
               href="/dashboard/pos/closing"
-              className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-black hover:bg-zinc-50"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-black hover:bg-zinc-50"
             >
               Cashier Shift
             </Link>
@@ -2485,7 +2506,7 @@ let autoPrintWindow:
 
             <Link
               href="/dashboard/kitchen"
-              className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-bold"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-bold"
             >
               Kitchen Display
             </Link>
@@ -2495,7 +2516,7 @@ let autoPrintWindow:
               onClick={() =>
                 void loadOrders()
               }
-              className="rounded-xl bg-zinc-950 px-4 py-2 text-sm font-bold text-white"
+              className="rounded-lg bg-zinc-950 px-3 py-2 text-xs font-bold text-white"
             >
               Refresh
             </button>
@@ -2505,7 +2526,7 @@ let autoPrintWindow:
         </div>
 
 
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-3 flex flex-wrap gap-1.5">
 
           {(
             [
@@ -2526,7 +2547,7 @@ let autoPrintWindow:
                   )
                 }
                 className={
-                  `rounded-xl px-4 py-2 text-sm font-bold ${
+                  `rounded-lg px-3 py-1.5 text-xs font-black ${
                     filter === value
                       ? 'bg-zinc-950 text-white'
                       : 'border border-zinc-300 bg-white text-zinc-600'
@@ -2546,19 +2567,19 @@ let autoPrintWindow:
             ORDERS FILTER UX V2
         =================================================== */}
 
-        <section className="mb-6">
+        <section className="mb-3">
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
 
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
 
               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">
                 Orders
               </p>
 
-              <div className="mt-2 flex items-end justify-between">
+              <div className="mt-1 flex items-end justify-between">
 
-                <p className="text-2xl font-black">
+                <p className="text-xl font-black">
                   {
                     Number(
                       historySummary.total_orders ||
@@ -2576,13 +2597,13 @@ let autoPrintWindow:
             </div>
 
 
-            <div className="rounded-2xl border border-red-100 bg-red-50/60 p-4">
+            <div className="rounded-xl border border-red-100 bg-red-50/60 p-3">
 
               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-red-500">
                 Unpaid
               </p>
 
-              <p className="mt-2 text-2xl font-black text-red-900">
+              <p className="mt-1 text-xl font-black text-red-900">
                 {
                   Number(
                     historySummary.unpaid_orders ||
@@ -2594,13 +2615,13 @@ let autoPrintWindow:
             </div>
 
 
-            <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
+            <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-3">
 
               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-600">
                 Active
               </p>
 
-              <p className="mt-2 text-2xl font-black text-amber-800">
+              <p className="mt-1 text-xl font-black text-amber-800">
                 {
                   Number(
                     historySummary.active_orders ||
@@ -2612,13 +2633,13 @@ let autoPrintWindow:
             </div>
 
 
-            <div className="rounded-2xl border border-green-100 bg-green-50/70 p-4">
+            <div className="rounded-xl border border-green-100 bg-green-50/70 p-3">
 
               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-green-600">
                 Paid
               </p>
 
-              <p className="mt-2 text-2xl font-black text-green-800">
+              <p className="mt-1 text-xl font-black text-green-800">
                 {
                   Number(
                     historySummary.paid_orders ||
@@ -2630,13 +2651,13 @@ let autoPrintWindow:
             </div>
 
 
-            <div className="rounded-2xl border border-zinc-200 bg-zinc-950 p-4 text-white shadow-sm">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-950 p-3 text-white shadow-sm">
 
               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">
                 Paid Sales
               </p>
 
-              <p className="mt-2 text-xl font-black">
+              <p className="mt-1 text-lg font-black">
                 {
                   money(
                     Number(
@@ -2652,9 +2673,9 @@ let autoPrintWindow:
           </div>
 
 
-          <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <div className="mt-3 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 px-3 py-2.5">
 
               <div>
 
@@ -2662,7 +2683,7 @@ let autoPrintWindow:
                   Transaction Filters
                 </p>
 
-                <p className="mt-0.5 text-xs text-zinc-500">
+                <p className="mt-0.5 text-[11px] text-zinc-500">
                   Default view shows today&apos;s restaurant orders.
                 </p>
 
@@ -2679,7 +2700,7 @@ let autoPrintWindow:
                     )
                   }
                   className={
-                    `rounded-lg px-3 py-2 text-xs font-black ${
+                    `rounded-md px-2.5 py-1.5 text-[10px] font-black ${
                       historyDateFrom ===
                         todayJakarta &&
                       historyDateTo ===
@@ -2700,7 +2721,7 @@ let autoPrintWindow:
                       '7D'
                     )
                   }
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-600 hover:bg-zinc-50"
+                  className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-zinc-600 hover:bg-zinc-50"
                 >
                   Last 7 Days
                 </button>
@@ -2713,7 +2734,7 @@ let autoPrintWindow:
                       '30D'
                     )
                   }
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-600 hover:bg-zinc-50"
+                  className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-zinc-600 hover:bg-zinc-50"
                 >
                   Last 30 Days
                 </button>
@@ -2726,7 +2747,7 @@ let autoPrintWindow:
                       'ALL'
                     )
                   }
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-600 hover:bg-zinc-50"
+                  className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-zinc-600 hover:bg-zinc-50"
                 >
                   All Dates
                 </button>
@@ -2736,7 +2757,7 @@ let autoPrintWindow:
             </div>
 
 
-            <div className="grid gap-3 p-5 xl:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
+            <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
 
               <label className="block">
 
@@ -2756,7 +2777,7 @@ let autoPrintWindow:
                     )
                   }
                   placeholder="Order no, sale no, table, outlet, guest..."
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-100"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-100"
                 />
 
               </label>
@@ -2779,7 +2800,7 @@ let autoPrintWindow:
                       event.target.value
                     )
                   }
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm font-bold"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-bold"
                 >
                   <option value="ALL">
                     All Outlets
@@ -2830,7 +2851,7 @@ let autoPrintWindow:
                       event.target.value
                     )
                   }
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm font-bold"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-bold"
                 >
                   <option value="ALL">
                     All Types
@@ -2867,7 +2888,7 @@ let autoPrintWindow:
                       event.target.value
                     )
                   }
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm font-bold"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-bold"
                 />
 
               </label>
@@ -2891,7 +2912,7 @@ let autoPrintWindow:
                       event.target.value
                     )
                   }
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-3 text-sm font-bold"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-bold"
                 />
 
               </label>
@@ -2899,7 +2920,7 @@ let autoPrintWindow:
             </div>
 
 
-            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-zinc-100 bg-zinc-50/70 px-5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 bg-zinc-50/70 px-3 py-2">
 
               <div className="flex flex-wrap items-center gap-3">
 
@@ -3046,7 +3067,7 @@ let autoPrintWindow:
           {historyServerTotal ===
             0 && (
 
-            <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
+            <div className="mt-3 rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-8 text-center">
 
               <p className="text-lg font-black text-zinc-700">
                 No transactions found
@@ -3079,13 +3100,13 @@ let autoPrintWindow:
 
         {loading ? (
 
-          <div className="rounded-2xl bg-white p-12 text-center shadow-sm">
+          <div className="rounded-xl bg-white p-8 text-center shadow-sm">
             Loading orders...
           </div>
 
         ) : (
 
-          <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-2 md:grid-cols-4">
 
             {filtered.map(
               (order) => {
@@ -3110,228 +3131,124 @@ let autoPrintWindow:
                   'PAID'
 
 
+                const mergedOrderItems =
+                  mergeOrderItems(
+                    orderItems
+                  )
+
+
+                const itemCount =
+                  mergedOrderItems.reduce(
+                    (
+                      total,
+                      item
+                    ) =>
+                      total +
+                      Number(
+                        item.quantity ||
+                        0
+                      ),
+                    0
+                  )
+
+
+                const itemSummary =
+                  mergedOrderItems
+                    .slice(
+                      0,
+                      2
+                    )
+                    .map(
+                      (item) =>
+                        item.menu_name
+                    )
+                    .join(', ') +
+                  (
+                    mergedOrderItems.length >
+                    2
+                      ? ` +${
+                          mergedOrderItems.length -
+                          2
+                        }`
+                      : ''
+                  )
+
+
+                const shortOrderNo =
+                  String(
+                    order.order_no ||
+                    ''
+                  )
+                    .split('-')
+                    .pop() ||
+                  order.order_no
+
+
                 return (
                   <article
                     key={
                       order.id
                     }
-                    className="group overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
+                    className="group flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md"
                   >
 
-                    <div className="border-b border-zinc-200 p-5">
+                    <div className="shrink-0 p-3 pb-2.5">
 
                       <div className="flex items-start justify-between gap-3">
 
-                        <div>
+                        <div className="min-w-0">
 
-                          <p className="text-xs font-black uppercase tracking-wide text-red-800">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-400">
                             {
-                              order.source
+                              order.order_type ===
+                              'DINE_IN'
+                                ? 'Dine in'
+                                : order.order_type ===
+                                    'TAKEAWAY'
+                                  ? 'Take away'
+                                  : order.order_type
                             }
-                            {' · '}
-                            {
-                              order.order_type
-                            }
+                            {order.table_code
+                              ? ` · ${order.table_code}`
+                              : ''}
                           </p>
 
-                          <h2 className="mt-1 text-xl font-black">
-                            {
+                          <h2
+                            title={
                               order.order_no
                             }
+                            className="mt-1 truncate text-lg font-black tracking-tight text-zinc-950"
+                          >
+                            #{shortOrderNo}
                           </h2>
 
                         </div>
 
 
-                        <div className="text-right">
-
-                          <p className="text-xs font-bold text-zinc-500">
-                            {
-                              formatTime(
-                                order.opened_at
-                              )
-                            }
-                          </p>
-
-                        </div>
-
-                      </div>
-
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-
-                        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold">
+                        <p className="shrink-0 text-sm font-black text-zinc-500">
                           {
-                            order.outlet_name
-                          }
-                        </span>
-
-
-                        {order.table_code && (
-                          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                            {
-                              order.table_code
-                            }
-                            {' · '}
-                            {
-                              order.table_name
-                            }
-                          </span>
-                        )}
-
-
-                        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                          {
-                            order.status
-                          }
-                        </span>
-
-
-                        <span
-                          className={
-                            `rounded-full px-3 py-1 text-xs font-bold ${
-                              unpaid
-                                ? 'bg-red-50 text-red-700'
-                                : 'bg-green-50 text-green-700'
-                            }`
-                          }
-                        >
-                          {
-                            order.payment_status
-                          }
-                        </span>
-
-                      </div>
-
-                    </div>
-
-
-                    <div className="divide-y divide-zinc-100">
-
-                      {mergeOrderItems(
-                        orderItems
-                      ).map(
-                        (item) => {
-
-                          const progress =
-                            kdsForMergedItem(
-                              item
+                            formatClock(
+                              order.opened_at
                             )
+                          }
+                        </p>
+
+                      </div>
 
 
-                          const station =
-                            String(
-                              progress?.station ||
-                              ''
-                            ).toUpperCase()
-
-
-                          return (
-
-                            <div
-                              key={
-                                item.id
-                              }
-                              className="flex items-start justify-between gap-4 px-5 py-4"
-                            >
-
-                              <div className="min-w-0">
-
-                                <p className="font-bold">
-                                  {
-                                    Number(
-                                      item.quantity
-                                    )
-                                  }
-                                  ×{' '}
-                                  {
-                                    item.menu_name
-                                  }
-                                </p>
-
-
-                                {progress && (
-
-                                  <div className="mt-2 flex flex-wrap items-center gap-2">
-
-                                    <span
-                                      className={
-                                        `rounded-full px-2.5 py-1 text-[11px] font-black ${
-                                          station ===
-                                          'BAR'
-                                            ? 'bg-blue-50 text-blue-700'
-                                            : 'bg-red-50 text-red-700'
-                                        }`
-                                      }
-                                    >
-                                      {
-                                        station ||
-                                        'KITCHEN'
-                                      }
-                                    </span>
-
-
-                                    <span
-                                      className={
-                                        `rounded-full px-2.5 py-1 text-[11px] font-black ${kitchenStatusStyle(
-                                          progress.status
-                                        )}`
-                                      }
-                                    >
-                                      {
-                                        displayKitchenStatus(
-                                          progress.status
-                                        )
-                                      }
-                                    </span>
-
-                                  </div>
-
-                                )}
-
-
-                                {item.notes && (
-
-                                  <p className="mt-2 text-xs text-amber-700">
-                                    {
-                                      item.notes
-                                    }
-                                  </p>
-
-                                )}
-
-                              </div>
-
-
-                              <p className="shrink-0 font-bold">
-                                {
-                                  money(
-                                    item.line_total
-                                  )
-                                }
-                              </p>
-
-                            </div>
-
-                          )
-
+                      <p className="mt-2 line-clamp-1 min-h-[1.25rem] text-xs font-semibold leading-5 text-zinc-600">
+                        {
+                          itemSummary ||
+                          'No items'
                         }
-                      )}
-
-                    </div>
+                      </p>
 
 
-                    <div className="border-t border-zinc-200 p-5">
+                      <div className="mt-2 border-t border-zinc-100 pt-2">
 
-                      <div className="flex items-end justify-between">
+                        <div className="flex items-center justify-between gap-2">
 
-                        <div>
-
-                          <p className="text-xs text-zinc-500">
-                            Grand Total
-                          </p>
-
-                          <p className="mt-1 text-2xl font-black text-red-900">
+                          <p className="text-lg font-black tracking-tight text-zinc-950">
                             {
                               money(
                                 order.grand_total
@@ -3339,29 +3256,54 @@ let autoPrintWindow:
                             }
                           </p>
 
+
+                          <span
+                            className={
+                              `rounded-lg px-2.5 py-1 text-[11px] font-black ${
+                                order.status ===
+                                'CANCELLED'
+                                  ? 'bg-red-50 text-red-700'
+                                  : unpaid
+                                    ? 'bg-amber-50 text-amber-700'
+                                    : 'bg-green-50 text-green-700'
+                              }`
+                            }
+                          >
+                            {
+                              order.status ===
+                              'CANCELLED'
+                                ? 'CANCELLED'
+                                : unpaid
+                                  ? order.status
+                                  : 'PAID'
+                            }
+                          </span>
+
                         </div>
 
 
-                        {order.sale_no && (
+                        <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold text-zinc-500">
 
-                          <div className="text-right">
+                          <span>
+                            {itemCount}{' '}
+                            item
+                          </span>
 
-                            <p className="text-xs text-zinc-500">
-                              Sale
-                            </p>
+                          <span className="truncate">
+                            {
+                              order.table_name ||
+                              order.outlet_name
+                            }
+                          </span>
 
-                            <p className="text-sm font-bold">
-                              {
-                                order.sale_no
-                              }
-                            </p>
-
-                          </div>
-
-                        )}
+                        </div>
 
                       </div>
 
+                    </div>
+
+
+                    <div className="mt-auto shrink-0 border-t border-zinc-100 p-2.5">
 
                       {!unpaid &&
                         order.sale_id && (
@@ -3374,7 +3316,7 @@ let autoPrintWindow:
                               order.outlet_id
                             )
                           }}
-                          className="mt-5 flex w-full items-center justify-center rounded-xl border border-zinc-300 bg-white px-5 py-3 font-black text-zinc-950 hover:bg-zinc-50"
+                          className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-2.5 py-2 text-[11px] font-black text-white shadow-sm transition hover:bg-blue-500"
                         >
                           REPRINT RECEIPT
                         </button>
@@ -3390,29 +3332,31 @@ let autoPrintWindow:
                           order.status
                         ) && (
 
-                        <>
-                        <Link
-                          href={`/dashboard/pos/orders/${order.id}/add-items`}
-                          className="mt-5 flex w-full items-center justify-center rounded-xl border-2 border-zinc-950 bg-white px-5 py-3 font-black text-zinc-950 hover:bg-zinc-50"
-                        >
-                          + ADD ITEMS
-                        </Link>
+                        <div className="grid grid-cols-2 gap-2">
+
+                          <Link
+                            href={`/dashboard/pos/orders/${order.id}/add-items`}
+                            className="flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-[9px] font-black text-zinc-700 hover:bg-zinc-50"
+                          >
+                            + ADD ITEMS
+                          </Link>
 
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            window.open(
-                              `/print/order-bill/${order.id}?autoprint=1`,
-                              '_blank',
-                              'noopener,noreferrer'
-                            )
-                          }}
-                          className="mt-3 flex w-full items-center justify-center rounded-xl border border-zinc-300 bg-white px-5 py-3 font-black text-zinc-950 hover:bg-zinc-50"
-                        >
-                          PRINT BILL
-                        </button>
-                        </>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              window.open(
+                                `/print/order-bill/${order.id}?autoprint=1`,
+                                '_blank',
+                                'noopener,noreferrer'
+                              )
+                            }}
+                            className="flex items-center justify-center rounded-lg bg-blue-600 px-2 py-1.5 text-[9px] font-black text-white shadow-sm transition hover:bg-blue-500"
+                          >
+                            PRINT ORDER
+                          </button>
+
+                        </div>
 
                       )}
 
@@ -3421,9 +3365,9 @@ let autoPrintWindow:
                         order.status !==
                           'CANCELLED' && (
 
-                        <div className="mt-5">
+                        <div className="mt-2 grid grid-cols-[0.78fr_1.22fr] gap-2">
 
-                          <label className="mb-2 block text-xs font-bold">
+                          <label className="sr-only">
                             Payment Method
                           </label>
 
@@ -3452,7 +3396,7 @@ let autoPrintWindow:
                                 })
                               )
                             }
-                            className="w-full rounded-xl border border-zinc-300 px-4 py-3"
+                            className="min-w-0 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-[9px] font-bold text-zinc-700"
                           >
 
                             <option value="QRIS">
@@ -3489,15 +3433,13 @@ let autoPrintWindow:
                                 order
                               )
                             }
-                            className="mt-3 w-full rounded-xl bg-green-700 px-5 py-4 font-black text-white hover:bg-green-800 disabled:opacity-50"
+                            className="rounded-lg bg-blue-600 px-2 py-1.5 text-[9px] font-black text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-50"
                           >
                             {
                               payingId ===
                               order.id
-                                ? 'PROCESSING PAYMENT...'
-                                : `PAY ${money(
-                                    order.grand_total
-                                  )}`
+                                ? 'PROCESSING...'
+                                : 'PAYMENT'
                             }
                           </button>
 
@@ -3517,7 +3459,7 @@ let autoPrintWindow:
             {filtered.length ===
               0 && (
 
-              <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-12 text-center text-zinc-500">
+              <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-500 sm:col-span-2 lg:col-span-4">
                 No orders found.
               </div>
 
@@ -3534,16 +3476,16 @@ let autoPrintWindow:
 
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4">
 
-          <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl">
 
-            <div className="bg-green-600 px-6 py-8 text-center text-white">
+            <div className="bg-green-600 px-5 py-5 text-center text-white">
 
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl font-black text-green-600">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-2xl font-black text-green-600">
                 ✓
               </div>
 
 
-              <h2 className="mt-4 text-2xl font-black">
+              <h2 className="mt-3 text-xl font-black">
                 PAYMENT SUCCESSFUL
               </h2>
 
@@ -3555,9 +3497,9 @@ let autoPrintWindow:
             </div>
 
 
-            <div className="p-6">
+            <div className="p-4">
 
-              <div className="rounded-2xl bg-zinc-50 p-5">
+              <div className="rounded-xl bg-zinc-50 p-4">
 
                 <div className="flex items-center justify-between gap-4">
 
@@ -3658,7 +3600,7 @@ let autoPrintWindow:
                     paymentSuccess.outletId
                   )
                 }}
-                className="mt-5 w-full rounded-xl bg-zinc-950 px-5 py-4 font-black text-white hover:bg-zinc-800"
+                className="mt-4 w-full rounded-lg bg-zinc-950 px-4 py-3 text-sm font-black text-white hover:bg-zinc-800"
               >
                 PRINT RECEIPT
               </button>
@@ -3670,7 +3612,7 @@ let autoPrintWindow:
                   window.location.href =
                     '/dashboard/pos/sales/' + paymentSuccess.saleId
                 }}
-                className="mt-3 w-full rounded-xl border border-zinc-950 bg-white px-5 py-4 font-black text-zinc-950 hover:bg-zinc-50"
+                className="mt-2 w-full rounded-lg border border-zinc-950 bg-white px-4 py-3 text-sm font-black text-zinc-950 hover:bg-zinc-50"
               >
                 VIEW SALE DETAIL
               </button>
