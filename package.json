@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ascentio-it/capacitor-bluetooth-serial": "^8.0.1",
     "@capacitor/android": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@supabase/ssr": "^0.12.5",

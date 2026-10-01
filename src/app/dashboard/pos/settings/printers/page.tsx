@@ -189,6 +189,13 @@ export default async function PrinterSettingsPage() {
             Open Orders
           </Link>
 
+          <Link
+            href="/dashboard/pos/settings/printers/bluetooth-test"
+            className="rounded-xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white hover:bg-zinc-800"
+          >
+            Bluetooth Printer Test
+          </Link>
+
         </div>
 
 
