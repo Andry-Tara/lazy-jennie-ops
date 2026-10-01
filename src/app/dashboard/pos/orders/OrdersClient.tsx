@@ -12,6 +12,11 @@ import {
 
 import { createClient } from '@/lib/supabase/client'
 
+import {
+  isAndroidNative,
+  printBluetoothReceipt,
+} from '@/lib/pos/bluetooth-printer'
+
 
 type Order = {
   id: string
@@ -87,6 +92,8 @@ type ReceiptPrinterSetting = {
 
   device_name: string | null
 
+  device_identifier: string | null
+
   connection_type: string
 
   paper_width_mm: number
@@ -104,6 +111,8 @@ type OrdersClientProps = {
 
 type PaymentSuccess = {
   orderId: string
+
+  outletId: string
   orderNo: string
 
   tableCode: string | null
@@ -1454,6 +1463,174 @@ export default function OrdersClient({
   }
 
 
+
+  function receiptPrinterFor(
+    outletId: string
+  ) {
+    return printerSettings.find(
+      (setting) =>
+        setting.outlet_id ===
+          outletId &&
+        setting.printer_role ===
+          'RECEIPT'
+    )
+  }
+
+
+  async function printBluetoothOrderReceipt(
+    orderId: string,
+    printerSetting:
+      ReceiptPrinterSetting
+  ) {
+    const address =
+      printerSetting
+        .device_identifier
+        ?.trim() ||
+      ''
+
+    if (!address) {
+      throw new Error(
+        'Bluetooth printer address is empty. Re-save the printer in Printer Settings.'
+      )
+    }
+
+    const {
+      data:
+        receipt,
+      error:
+        receiptError,
+    } =
+      await supabase
+        .from(
+          'restaurant_order_receipt_secure'
+        )
+        .select('*')
+        .eq(
+          'order_id',
+          orderId
+        )
+        .maybeSingle()
+
+    if (
+      receiptError ||
+      !receipt
+    ) {
+      throw new Error(
+        receiptError?.message ||
+        'Receipt data is not available.'
+      )
+    }
+
+    const {
+      data:
+        receiptItems,
+      error:
+        itemError,
+    } =
+      await supabase
+        .from(
+          'sale_items_secure'
+        )
+        .select(`
+          id,
+          sale_id,
+          menu_item_id,
+          menu_code,
+          menu_name,
+          quantity,
+          unit_price,
+          gross_amount,
+          discount_amount,
+          net_amount,
+          notes,
+          line_status,
+          created_at
+        `)
+        .eq(
+          'sale_id',
+          receipt.sale_id
+        )
+        .eq(
+          'line_status',
+          'ACTIVE'
+        )
+        .order(
+          'created_at',
+          {
+            ascending: true,
+          }
+        )
+
+    if (itemError) {
+      throw new Error(
+        itemError.message
+      )
+    }
+
+    await printBluetoothReceipt(
+      address,
+      receipt,
+      receiptItems || []
+    )
+  }
+
+
+  async function printOrderReceipt(
+    orderId: string,
+    outletId: string
+  ) {
+    const printerSetting =
+      receiptPrinterFor(
+        outletId
+      )
+
+    const nativeBluetooth =
+      isAndroidNative() &&
+      Boolean(
+        printerSetting
+          ?.is_active
+      ) &&
+      printerSetting
+        ?.connection_type ===
+        'ANDROID_BLUETOOTH'
+
+    if (
+      nativeBluetooth &&
+      printerSetting
+    ) {
+      try {
+        await printBluetoothOrderReceipt(
+          orderId,
+          printerSetting
+        )
+
+        return
+
+      } catch (printError) {
+
+        console.warn(
+          'BLUETOOTH RECEIPT PRINT ERROR:',
+          printError
+        )
+
+        window.alert(
+          printError instanceof Error
+            ? printError.message
+            : 'Receipt print failed.'
+        )
+
+        return
+      }
+    }
+
+    window.open(
+      `/print/order-receipt/${orderId}?autoprint=1`,
+      '_blank',
+      'noopener,noreferrer'
+    )
+  }
+
+
   async function payOrder(
     order: Order
   ) {
@@ -1494,7 +1671,22 @@ export default function OrdersClient({
         'BROWSER'
 
 
-    let autoPrintWindow:
+
+
+    const shouldBluetoothAutoPrint =
+      Boolean(
+        printerSetting
+          ?.is_active
+      ) &&
+      Boolean(
+        printerSetting
+          ?.auto_print_after_payment
+      ) &&
+      printerSetting
+        ?.connection_type ===
+        'ANDROID_BLUETOOTH' &&
+      isAndroidNative()
+let autoPrintWindow:
       Window |
       null =
         null
@@ -1646,6 +1838,9 @@ export default function OrdersClient({
         orderId:
           order.id,
 
+        outletId:
+          order.outlet_id,
+
         orderNo:
           order.order_no,
 
@@ -1699,6 +1894,40 @@ export default function OrdersClient({
           `/print/order-receipt/${order.id}?autoprint=1`
 
       }
+
+
+      if (
+        shouldBluetoothAutoPrint &&
+        printerSetting
+      ) {
+        try {
+
+          await printBluetoothOrderReceipt(
+            order.id,
+            printerSetting
+          )
+
+        } catch (
+          printError
+        ) {
+
+          /*
+           * Payment is already settled at this point.
+           * Printing must NEVER turn a successful payment
+           * into a payment failure.
+           */
+          console.warn(
+            'AUTO BLUETOOTH RECEIPT PRINT ERROR:',
+            printError
+          )
+
+          setSuccess(
+            'Payment successful. Automatic receipt printing failed; use REPRINT RECEIPT.'
+          )
+
+        }
+      }
+
 
 
       // Refresh data in background,
@@ -3140,10 +3369,9 @@ export default function OrdersClient({
                         <button
                           type="button"
                           onClick={() => {
-                            window.open(
-                              `/print/order-receipt/${order.id}?autoprint=1`,
-                              '_blank',
-                              'noopener,noreferrer'
+                            void printOrderReceipt(
+                              order.id,
+                              order.outlet_id
                             )
                           }}
                           className="mt-5 flex w-full items-center justify-center rounded-xl border border-zinc-300 bg-white px-5 py-3 font-black text-zinc-950 hover:bg-zinc-50"
@@ -3425,10 +3653,9 @@ export default function OrdersClient({
               <button
                 type="button"
                 onClick={() => {
-                  window.open(
-                    `/print/order-receipt/${paymentSuccess.orderId}?autoprint=1`,
-                    '_blank',
-                    'noopener,noreferrer'
+                  void printOrderReceipt(
+                    paymentSuccess.orderId,
+                    paymentSuccess.outletId
                   )
                 }}
                 className="mt-5 w-full rounded-xl bg-zinc-950 px-5 py-4 font-black text-white hover:bg-zinc-800"

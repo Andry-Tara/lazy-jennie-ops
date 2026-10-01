@@ -115,6 +115,7 @@ export default async function OrdersPage() {
         printer_role,
         device_name,
         connection_type,
+        device_identifier,
         paper_width_mm,
         auto_print_after_payment,
         is_active
@@ -155,6 +156,14 @@ export default async function OrdersPage() {
             row.connection_type ||
             'BROWSER'
           ),
+
+        device_identifier:
+          row.device_identifier
+            ? String(
+                row.device_identifier
+              )
+            : null,
+
 
         paper_width_mm:
           Number(
