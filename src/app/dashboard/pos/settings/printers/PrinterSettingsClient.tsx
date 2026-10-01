@@ -9,6 +9,13 @@ import {
   createClient,
 } from '@/lib/supabase/client'
 
+import {
+  type BluetoothPrinterDevice,
+  getPairedBluetoothPrinters,
+  isAndroidNative,
+  testBluetoothPrinter,
+} from '@/lib/pos/bluetooth-printer'
+
 
 type Outlet = {
   id: string
@@ -202,6 +209,20 @@ export default function PrinterSettingsClient({
     )
 
 
+  const [
+    bluetoothDevices,
+    setBluetoothDevices,
+  ] = useState<BluetoothPrinterDevice[]>([])
+
+  const [
+    bluetoothBusy,
+    setBluetoothBusy,
+  ] = useState(false)
+
+  const nativeAndroid =
+    isAndroidNative()
+
+
   const selectedOutlet =
     outlets.find(
       (row) =>
@@ -266,12 +287,114 @@ export default function PrinterSettingsClient({
   }
 
 
+  async function loadBluetoothDevices() {
+
+    if (!nativeAndroid) {
+      setError(
+        'Bluetooth printer discovery is only available in the HomeTech POS Android app.'
+      )
+      return
+    }
+
+    setBluetoothBusy(true)
+    setError('')
+    setSuccess('')
+
+    try {
+
+      const rows =
+        await getPairedBluetoothPrinters()
+
+      setBluetoothDevices(rows)
+
+      if (!rows.length) {
+        setError(
+          'No paired Bluetooth devices found. Pair the printer in Android Settings first.'
+        )
+        return
+      }
+
+      const matched =
+        rows.find(
+          (row) =>
+            row.address ===
+            deviceIdentifier
+        ) || rows[0]
+
+      setDeviceName(
+        matched.name
+      )
+
+      setDeviceIdentifier(
+        matched.address
+      )
+
+      setSuccess(
+        `${rows.length} paired Bluetooth device(s) found.`
+      )
+
+    } catch (err) {
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load paired Bluetooth devices.'
+      )
+
+    } finally {
+
+      setBluetoothBusy(false)
+
+    }
+
+  }
+
+
+  function selectBluetoothDevice(
+    address: string
+  ) {
+
+    const device =
+      bluetoothDevices.find(
+        (row) =>
+          row.address === address
+      )
+
+    setDeviceIdentifier(
+      address
+    )
+
+    if (device) {
+      setDeviceName(
+        device.name
+      )
+    }
+
+    setError('')
+    setSuccess('')
+
+  }
+
+
   async function saveSetting() {
 
     if (!outletId) {
 
       setError(
         'Branch / outlet wajib dipilih.'
+      )
+
+      return
+    }
+
+
+    if (
+      connectionType === 'ANDROID_BLUETOOTH' &&
+      !deviceIdentifier.trim()
+    ) {
+
+      setError(
+        'Bluetooth printer wajib dipilih sebelum Save Settings.'
       )
 
       return
@@ -350,7 +473,7 @@ export default function PrinterSettingsClient({
   }
 
 
-  function testPrint() {
+  function browserTestPrint() {
 
     const popup =
       window.open(
@@ -494,6 +617,70 @@ export default function PrinterSettingsClient({
   }
 
 
+  async function testPrint() {
+
+    if (
+      connectionType !==
+      'ANDROID_BLUETOOTH'
+    ) {
+
+      browserTestPrint()
+      return
+
+    }
+
+
+    if (!nativeAndroid) {
+
+      setError(
+        'Android Bluetooth Test Print hanya tersedia di HomeTech POS Android app.'
+      )
+
+      return
+    }
+
+
+    if (!deviceIdentifier.trim()) {
+
+      setError(
+        'Pilih Bluetooth printer terlebih dahulu.'
+      )
+
+      return
+    }
+
+
+    setBluetoothBusy(true)
+    setError('')
+    setSuccess('')
+
+    try {
+
+      await testBluetoothPrinter(
+        deviceIdentifier.trim()
+      )
+
+      setSuccess(
+        `Bluetooth test print sent to ${deviceName || deviceIdentifier}.`
+      )
+
+    } catch (err) {
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Bluetooth test print failed.'
+      )
+
+    } finally {
+
+      setBluetoothBusy(false)
+
+    }
+
+  }
+
+
   return (
 
     <div className="mt-8 space-y-6">
@@ -620,6 +807,138 @@ export default function PrinterSettingsClient({
 
           </div>
 
+          {connectionType ===
+            'ANDROID_BLUETOOTH' && (
+
+            <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                <div>
+
+                  <p className="font-black text-blue-950">
+                    Android Bluetooth Printer
+                  </p>
+
+                  <p className="mt-1 text-sm text-blue-800">
+                    Select a paired Bluetooth Classic / SPP thermal printer.
+                  </p>
+
+                </div>
+
+
+                <div className="rounded-xl bg-white px-4 py-2 text-xs font-black text-blue-900">
+
+                  {
+                    nativeAndroid
+                      ? 'ANDROID NATIVE'
+                      : 'WEB / NON-NATIVE'
+                  }
+
+                </div>
+
+              </div>
+
+
+              {!nativeAndroid && (
+
+                <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+                  Open Printer Settings from the HomeTech POS Android app to discover Bluetooth devices.
+                </div>
+
+              )}
+
+
+              {deviceIdentifier && (
+
+                <div className="mt-4 rounded-xl border border-blue-200 bg-white p-4">
+
+                  <p className="text-xs font-black uppercase tracking-wider text-zinc-400">
+                    Selected / Saved Printer
+                  </p>
+
+                  <p className="mt-1 font-black text-zinc-900">
+                    {deviceName || 'Bluetooth Printer'}
+                  </p>
+
+                  <p className="mt-1 font-mono text-sm text-zinc-500">
+                    {deviceIdentifier}
+                  </p>
+
+                </div>
+
+              )}
+
+
+              <button
+                type="button"
+                disabled={
+                  bluetoothBusy ||
+                  !nativeAndroid
+                }
+                onClick={() =>
+                  void loadBluetoothDevices()
+                }
+                className="mt-4 w-full rounded-xl bg-blue-700 px-5 py-3 font-black text-white hover:bg-blue-800 disabled:opacity-40"
+              >
+                {
+                  bluetoothBusy
+                    ? 'PLEASE WAIT...'
+                    : 'REFRESH PAIRED DEVICES'
+                }
+              </button>
+
+
+              {bluetoothDevices.length > 0 && (
+
+                <div className="mt-4">
+
+                  <label className="mb-2 block text-sm font-bold">
+                    Paired Bluetooth Device
+                  </label>
+
+                  <select
+                    value={
+                      deviceIdentifier
+                    }
+                    onChange={(event) =>
+                      selectBluetoothDevice(
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-xl border border-blue-200 bg-white px-4 py-3"
+                  >
+
+                    {bluetoothDevices.map(
+                      (device) => (
+
+                        <option
+                          key={
+                            device.address
+                          }
+                          value={
+                            device.address
+                          }
+                        >
+                          {device.name}
+                          {' — '}
+                          {device.address}
+                        </option>
+
+                      )
+                    )}
+
+                  </select>
+
+                </div>
+
+              )}
+
+            </div>
+
+          )}
+
+
 
           <div>
 
@@ -672,6 +991,9 @@ export default function PrinterSettingsClient({
                 setDeviceIdentifier(
                   event.target.value
                 )
+              }
+              readOnly={
+                connectionType === 'ANDROID_BLUETOOTH'
               }
               placeholder="Bluetooth MAC / IP / future device ID"
               className="w-full rounded-xl border border-zinc-300 px-4 py-3"
@@ -808,8 +1130,12 @@ export default function PrinterSettingsClient({
 
           <button
             type="button"
-            onClick={
-              testPrint
+            disabled={
+              busy ||
+              bluetoothBusy
+            }
+            onClick={() =>
+              void testPrint()
             }
             className="rounded-xl border border-zinc-300 bg-white px-5 py-4 font-black hover:bg-zinc-50"
           >
