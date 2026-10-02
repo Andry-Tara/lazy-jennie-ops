@@ -311,21 +311,21 @@ export default function WaiterTableMapClient({
 
   return (
 
-    <div className="space-y-5">
+    <div className="space-y-3">
 
 
       {/* ===================================================
           OUTLET
       =================================================== */}
 
-      <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
 
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
 
 
           <div className="min-w-[240px] flex-1">
 
-            <label className="mb-2 block text-xs font-black uppercase tracking-wider text-zinc-400">
+            <label className="mb-1 block text-[10px] font-black uppercase tracking-wider text-zinc-400">
               Branch
             </label>
 
@@ -347,7 +347,7 @@ export default function WaiterTableMapClient({
                 )
 
               }}
-              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 font-bold outline-none focus:border-zinc-950"
+              className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-bold outline-none focus:border-blue-500"
             >
 
               {outlets.map(
@@ -384,7 +384,7 @@ export default function WaiterTableMapClient({
             onClick={() =>
               router.refresh()
             }
-            className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-black hover:bg-zinc-50"
+            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-black hover:bg-zinc-50"
           >
             ↻ Refresh
           </button>
@@ -399,16 +399,16 @@ export default function WaiterTableMapClient({
           SUMMARY
       =================================================== */}
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
 
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm">
 
-          <p className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
             Tables
           </p>
 
-          <p className="mt-2 text-3xl font-black">
+          <p className="mt-1 text-xl font-black">
             {
               outletTables.length
             }
@@ -417,13 +417,13 @@ export default function WaiterTableMapClient({
         </div>
 
 
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5">
 
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
             Available
           </p>
 
-          <p className="mt-2 text-3xl font-black text-emerald-800">
+          <p className="mt-1 text-xl font-black text-emerald-800">
             {
               availableCount
             }
@@ -432,13 +432,13 @@ export default function WaiterTableMapClient({
         </div>
 
 
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5">
 
-          <p className="text-xs font-bold uppercase tracking-wider text-amber-700">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
             Occupied
           </p>
 
-          <p className="mt-2 text-3xl font-black text-amber-800">
+          <p className="mt-1 text-xl font-black text-amber-800">
             {
               occupiedCount
             }
@@ -447,13 +447,13 @@ export default function WaiterTableMapClient({
         </div>
 
 
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-2.5">
 
-          <p className="text-xs font-bold uppercase tracking-wider text-blue-700">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
             Open Orders
           </p>
 
-          <p className="mt-2 text-3xl font-black text-blue-800">
+          <p className="mt-1 text-xl font-black text-blue-800">
             {
               openOrderCount
             }
@@ -469,9 +469,9 @@ export default function WaiterTableMapClient({
           FILTER
       =================================================== */}
 
-      <section className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
 
-        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+        <div className="grid gap-2 md:grid-cols-[1fr_auto]">
 
 
           <input
@@ -486,11 +486,11 @@ export default function WaiterTableMapClient({
               )
             }
             placeholder="Search table or order..."
-            className="rounded-2xl border border-zinc-300 px-4 py-3 outline-none focus:border-zinc-950"
+            className="rounded-xl border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
           />
 
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
 
             {(
               [
@@ -511,7 +511,7 @@ export default function WaiterTableMapClient({
                       status
                     )
                   }
-                  className={`rounded-xl px-3 py-3 text-xs font-black ${
+                  className={`rounded-lg px-3 py-2 text-[10px] font-black ${
                     statusFilter ===
                     status
 
@@ -548,15 +548,15 @@ export default function WaiterTableMapClient({
 
       <section>
 
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between">
 
           <div>
 
-            <p className="text-xs font-black uppercase tracking-wider text-zinc-400">
+            <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
               Table Map
             </p>
 
-            <h2 className="mt-1 text-xl font-black">
+            <h2 className="mt-0.5 text-lg font-black">
               {
                 selectedOutlet
                   ?.name ||
@@ -593,7 +593,7 @@ export default function WaiterTableMapClient({
 
         ) : (
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
 
             {filteredTables.map(
               (table) => {
@@ -624,7 +624,7 @@ export default function WaiterTableMapClient({
                         table.id
                       )
                     }
-                    className={`min-h-[190px] rounded-3xl border p-4 text-left transition ${
+                    className={`min-h-[132px] rounded-xl border p-3 text-left transition ${
                       selected
 
                         ? 'border-zinc-950 ring-2 ring-zinc-950'
@@ -641,7 +641,7 @@ export default function WaiterTableMapClient({
 
                       <div>
 
-                        <p className="text-2xl font-black">
+                        <p className="text-xl font-black">
                           {
                             table.code
                           }
@@ -657,7 +657,7 @@ export default function WaiterTableMapClient({
 
 
                       <span
-                        className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
+                        className={`rounded-lg px-2 py-0.5 text-[9px] font-black ${
                           occupied
 
                             ? 'bg-amber-200 text-amber-900'
@@ -675,7 +675,7 @@ export default function WaiterTableMapClient({
                     </div>
 
 
-                    <p className="mt-4 text-xs font-bold text-zinc-500">
+                    <p className="mt-2 text-[10px] font-bold text-zinc-500">
                       {
                         table.capacity
                       } pax
@@ -685,7 +685,7 @@ export default function WaiterTableMapClient({
                     {occupied &&
                     table.active_order_id ? (
 
-                      <div className="mt-4 border-t border-amber-200 pt-3">
+                      <div className="mt-2 border-t border-amber-200 pt-2">
 
                         <p className="truncate text-xs font-black">
                           {
@@ -717,7 +717,7 @@ export default function WaiterTableMapClient({
 
                     ) : (
 
-                      <div className="mt-4 border-t border-emerald-200 pt-3">
+                      <div className="mt-2 border-t border-emerald-200 pt-2">
 
                         <p className="text-xs font-bold text-emerald-800">
                           Ready for new guest
@@ -748,20 +748,20 @@ export default function WaiterTableMapClient({
 
       {selectedTable && (
 
-        <section className="sticky bottom-4 rounded-3xl border border-zinc-300 bg-white p-5 shadow-2xl">
+        <section className="sticky bottom-2 rounded-xl border border-zinc-300 bg-white p-3 shadow-2xl">
 
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
 
 
             <div>
 
-              <p className="text-xs font-black uppercase tracking-wider text-zinc-400">
+              <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
                 Selected Table
               </p>
 
               <div className="mt-1 flex items-center gap-3">
 
-                <p className="text-2xl font-black">
+                <p className="text-xl font-black">
                   {
                     selectedTable.code
                   }
@@ -821,7 +821,7 @@ export default function WaiterTableMapClient({
           </div>
 
 
-          <div className="mt-4">
+          <div className="mt-2">
 
             {selectedTable.active_order_id ? (
 
@@ -832,7 +832,7 @@ export default function WaiterTableMapClient({
                     `/dashboard/waiter/order/${selectedTable.id}`
                   )
                 }
-                className="w-full rounded-2xl bg-amber-600 px-4 py-4 text-center text-sm font-black text-white hover:bg-amber-700"
+                className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-center text-xs font-black text-white hover:bg-blue-500"
               >
                 OPEN ORDER · ADD ITEMS
               </button>
@@ -846,7 +846,7 @@ export default function WaiterTableMapClient({
                     `/dashboard/waiter/order/${selectedTable.id}`
                   )
                 }
-                className="w-full rounded-2xl bg-zinc-950 px-4 py-4 text-center text-sm font-black text-white hover:bg-zinc-800"
+                className="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-center text-xs font-black text-white hover:bg-blue-500"
               >
                 START ORDER
               </button>

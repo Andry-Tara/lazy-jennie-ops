@@ -632,33 +632,33 @@ export default function WaiterOrderClient({
 
     <main className="min-h-screen bg-zinc-100 text-zinc-900">
 
-      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px] px-3 py-3 sm:px-4">
 
 
         {/* HEADER */}
 
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
 
           <div>
 
             <Link
               href="/dashboard/waiter"
-              className="text-sm font-bold text-zinc-500"
+              className="text-xs font-bold text-zinc-500 hover:text-zinc-900"
             >
               ← Table Map
             </Link>
 
 
-            <p className="mt-5 text-xs font-black uppercase tracking-[0.2em] text-red-800">
+            <p className="mt-2 text-[10px] font-black uppercase tracking-[0.16em] text-red-800">
               Waiter Mode · {
                 table.outlet_name
               }
             </p>
 
 
-            <div className="mt-2 flex items-baseline gap-3">
+            <div className="mt-1 flex items-baseline gap-2">
 
-              <h1 className="text-3xl font-black">
+              <h1 className="text-2xl font-black">
                 {
                   table.code
                 }
@@ -680,7 +680,7 @@ export default function WaiterOrderClient({
 
 
           <div
-            className={`rounded-2xl px-5 py-3 ${
+            className={`rounded-xl px-3 py-2 ${
               order
 
                 ? 'bg-amber-100 text-amber-900'
@@ -689,7 +689,7 @@ export default function WaiterOrderClient({
             }`}
           >
 
-            <p className="text-xs font-black uppercase">
+            <p className="text-[10px] font-black uppercase">
               {
                 order
                   ? 'Active Order'
@@ -697,7 +697,7 @@ export default function WaiterOrderClient({
               }
             </p>
 
-            <p className="mt-1 font-black">
+            <p className="mt-0.5 text-sm font-black">
               {
                 order
                   ?.order_no ||
@@ -711,17 +711,17 @@ export default function WaiterOrderClient({
 
 
 
-        <div className="grid gap-5 lg:grid-cols-[1fr_400px]">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
 
 
           {/* ===============================================
               MENU
           =============================================== */}
 
-          <div className="space-y-4">
+          <div className="space-y-3">
 
 
-            <section className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
 
               <input
                 value={
@@ -735,11 +735,11 @@ export default function WaiterOrderClient({
                   )
                 }
                 placeholder="Search menu..."
-                className="w-full rounded-2xl border border-zinc-300 px-4 py-3 outline-none focus:border-zinc-950"
+                className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
               />
 
 
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
 
                 {categories.map(
                   (value) => (
@@ -754,7 +754,7 @@ export default function WaiterOrderClient({
                           value
                         )
                       }
-                      className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-black ${
+                      className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-[10px] font-black ${
                         category ===
                           value
 
@@ -775,7 +775,7 @@ export default function WaiterOrderClient({
 
 
 
-            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <section className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
 
               {filteredMenus.map(
                 (menu) => {
@@ -792,10 +792,10 @@ export default function WaiterOrderClient({
                       key={
                         menu.id
                       }
-                      className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm"
+                      className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"
                     >
 
-                      <p className="text-xs font-black uppercase text-zinc-400">
+                      <p className="text-[9px] font-black uppercase tracking-wide text-zinc-400">
                         {
                           menu.category ||
                           'Menu'
@@ -803,14 +803,14 @@ export default function WaiterOrderClient({
                       </p>
 
 
-                      <h3 className="mt-2 min-h-[48px] text-lg font-black">
+                      <h3 className="mt-1 min-h-[34px] text-sm font-black leading-4">
                         {
                           menu.name
                         }
                       </h3>
 
 
-                      <p className="mt-1 text-sm font-black text-red-900">
+                      <p className="mt-1 text-xs font-black text-red-900">
                         {
                           money(
                             menu.selling_price
@@ -819,7 +819,7 @@ export default function WaiterOrderClient({
                       </p>
 
 
-                      <div className="mt-4 grid grid-cols-[44px_1fr_44px] items-center gap-2">
+                      <div className="mt-2 grid grid-cols-[36px_1fr_36px] items-center gap-1.5">
 
                         <button
                           type="button"
@@ -828,13 +828,13 @@ export default function WaiterOrderClient({
                               menu.id
                             )
                           }
-                          className="h-11 rounded-xl bg-zinc-100 text-xl font-black"
+                          className="h-9 rounded-lg bg-zinc-100 text-lg font-black hover:bg-zinc-200"
                         >
                           −
                         </button>
 
 
-                        <div className="text-center text-xl font-black">
+                        <div className="text-center text-base font-black">
                           {
                             row?.qty ||
                             0
@@ -849,7 +849,7 @@ export default function WaiterOrderClient({
                               menu.id
                             )
                           }
-                          className="h-11 rounded-xl bg-zinc-950 text-xl font-black text-white"
+                          className="h-9 rounded-lg bg-blue-600 text-lg font-black text-white hover:bg-blue-500"
                         >
                           +
                         </button>
@@ -872,7 +872,7 @@ export default function WaiterOrderClient({
                             )
                           }
                           placeholder="Kitchen note..."
-                          className="mt-3 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-950"
+                          className="mt-2 w-full rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-500"
                         />
 
                       )}
@@ -894,22 +894,22 @@ export default function WaiterOrderClient({
               RIGHT PANEL
           =============================================== */}
 
-          <div className="space-y-4">
+          <div className="space-y-3 md:sticky md:top-3 md:flex md:h-[calc(100vh-7rem)] md:self-start md:flex-col md:gap-3 md:space-y-0">
 
 
             {order && (
 
-              <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
+              <section className="rounded-xl border border-amber-200 bg-amber-50 p-3 md:max-h-[170px] md:shrink-0 md:overflow-y-auto">
 
                 <div className="flex items-center justify-between">
 
                   <div>
 
-                    <p className="text-xs font-black uppercase tracking-wider text-amber-700">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-amber-700">
                       Current Order
                     </p>
 
-                    <p className="mt-1 font-black">
+                    <p className="mt-0.5 text-sm font-black">
                       {
                         order.order_no
                       }
@@ -929,7 +929,7 @@ export default function WaiterOrderClient({
                 </div>
 
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-2 space-y-2">
 
                   {existingItems.map(
                     (item) => (
@@ -938,7 +938,7 @@ export default function WaiterOrderClient({
                         key={
                           item.id
                         }
-                        className="border-t border-amber-200 pt-3"
+                        className="border-t border-amber-200 pt-2"
                       >
 
                         <div className="flex justify-between gap-3">
@@ -1001,9 +1001,9 @@ export default function WaiterOrderClient({
 
             {!order && (
 
-              <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm md:shrink-0">
 
-                <p className="text-xs font-black uppercase tracking-wider text-zinc-400">
+                <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
                   Guest
                 </p>
 
@@ -1020,7 +1020,7 @@ export default function WaiterOrderClient({
                     )
                   }
                   placeholder="Guest name · optional"
-                  className="mt-3 w-full rounded-xl border border-zinc-300 px-4 py-3"
+                  className="mt-2 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                 />
 
 
@@ -1036,8 +1036,8 @@ export default function WaiterOrderClient({
                     )
                   }
                   placeholder="General order note · optional"
-                  rows={3}
-                  className="mt-3 w-full resize-none rounded-xl border border-zinc-300 px-4 py-3"
+                  rows={2}
+                  className="mt-2 w-full resize-none rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                 />
 
               </section>
@@ -1046,9 +1046,9 @@ export default function WaiterOrderClient({
 
 
 
-            <section className="sticky top-4 rounded-3xl border border-zinc-200 bg-white p-5 shadow-lg">
+            <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-lg md:flex md:min-h-0 md:flex-1 md:flex-col">
 
-              <p className="text-xs font-black uppercase tracking-wider text-zinc-400">
+              <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
                 {
                   order
                     ? 'Additional Order'
@@ -1060,13 +1060,13 @@ export default function WaiterOrderClient({
               {cartLines.length ===
                 0 ? (
 
-                <div className="py-10 text-center text-sm text-zinc-400">
+                <div className="py-6 text-center text-xs text-zinc-400 md:flex md:flex-1 md:items-center md:justify-center">
                   Select menu to start.
                 </div>
 
               ) : (
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-3 space-y-2 md:min-h-0 md:flex-1 md:overflow-y-auto md:pr-1">
 
                   {cartLines.map(
                     (row) => (
@@ -1075,7 +1075,7 @@ export default function WaiterOrderClient({
                         key={
                           row.menu_item_id
                         }
-                        className="border-b border-zinc-100 pb-3"
+                        className="border-b border-zinc-100 pb-2"
                       >
 
                         <div className="flex justify-between gap-3">
@@ -1124,13 +1124,13 @@ export default function WaiterOrderClient({
               )}
 
 
-              <div className="mt-5 flex items-center justify-between border-t border-zinc-200 pt-4">
+              <div className="mt-3 flex shrink-0 items-center justify-between border-t border-zinc-200 pt-3">
 
                 <span className="font-black">
                   Total
                 </span>
 
-                <span className="text-xl font-black">
+                <span className="text-lg font-black">
                   {
                     money(
                       cartTotal
@@ -1143,7 +1143,7 @@ export default function WaiterOrderClient({
 
               {error && (
 
-                <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                <div className="mt-2 shrink-0 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
                   {error}
                 </div>
 
@@ -1160,7 +1160,7 @@ export default function WaiterOrderClient({
                 onClick={() =>
                   void submit()
                 }
-                className="mt-5 w-full rounded-2xl bg-zinc-950 px-5 py-4 text-base font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-3 w-full shrink-0 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {
                   sending
@@ -1176,7 +1176,7 @@ export default function WaiterOrderClient({
               </button>
 
 
-              <p className="mt-3 text-center text-xs font-semibold text-zinc-400">
+              <p className="mt-2 shrink-0 text-center text-[10px] font-semibold text-zinc-400">
                 Payment is handled by Cashier POS.
               </p>
 
