@@ -305,6 +305,43 @@ export default function KitchenDisplayClient({
   }
 
 
+
+  function ageMinutes(
+    ticket?: RawRow
+  ) {
+
+    const value =
+      ticket?.created_at
+
+    if (!value) {
+      return 0
+    }
+
+    const parsed =
+      Date.parse(
+        String(value)
+      )
+
+    if (
+      !Number.isFinite(
+        parsed
+      )
+    ) {
+      return 0
+    }
+
+    return Math.max(
+      0,
+      Math.floor(
+        (
+          Date.now() -
+          parsed
+        ) /
+        60000
+      )
+    )
+  }
+
   // ============================================================
   // LOAD
   // ============================================================
@@ -691,6 +728,344 @@ export default function KitchenDisplayClient({
       )
 
 
+  function parseTimestamp(
+    value: unknown
+  ) {
+
+    const parsed =
+      Date.parse(
+        String(
+          value ||
+          ''
+        )
+      )
+
+    return Number.isFinite(
+      parsed
+    )
+      ? parsed
+      : 0
+  }
+
+
+  function itemActivityTimestamp(
+    item?: RawRow
+  ) {
+
+    if (!item) {
+      return 0
+    }
+
+
+    // Physical units are generated for the actual KDS item/round.
+    // Prefer their creation timestamp when the secure view exposes it.
+    const unitTimes =
+      units
+        .filter(
+          (unit) =>
+            String(
+              unit.kitchen_ticket_item_id ??
+              ''
+            ) ===
+            itemId(
+              item
+            )
+        )
+        .map(
+          (unit) =>
+            Math.max(
+              parseTimestamp(
+                unit.kds_created_at
+              ),
+              parseTimestamp(
+                unit.item_created_at
+              ),
+              parseTimestamp(
+                unit.created_at
+              ),
+              parseTimestamp(
+                unit.updated_at
+              )
+            )
+        )
+        .filter(
+          (value) =>
+            value >
+            0
+        )
+
+
+    if (
+      unitTimes.length >
+      0
+    ) {
+      return Math.min(
+        ...unitTimes
+      )
+    }
+
+
+    // KDS secure views may expose the item/round timestamp
+    // under different aliases. Prefer round/item-specific fields.
+    const direct =
+      [
+        item.kds_item_created_at,
+        item.item_created_at,
+        item.round_created_at,
+        item.added_at,
+        item.kds_created_at,
+        item.created_at,
+        item.updated_at,
+      ]
+        .map(
+          parseTimestamp
+        )
+        .find(
+          (value) =>
+            value >
+            0
+        )
+
+
+    if (direct) {
+      return direct
+    }
+
+
+    const ticket =
+      ticketMap.get(
+        itemTicketId(
+          item
+        )
+      )
+
+
+    return Math.max(
+      parseTimestamp(
+        ticket?.kds_created_at
+      ),
+      parseTimestamp(
+        ticket?.created_at
+      ),
+      parseTimestamp(
+        ticket?.updated_at
+      )
+    )
+  }
+
+
+  function formatActivityTime(
+    item?: RawRow
+  ) {
+
+    const value =
+      itemActivityTimestamp(
+        item
+      )
+
+    if (!value) {
+      return '-'
+    }
+
+
+    return new Intl.DateTimeFormat(
+      'id-ID',
+      {
+        hour:
+          '2-digit',
+        minute:
+          '2-digit',
+        hour12:
+          false,
+        timeZone:
+          'Asia/Jakarta',
+      }
+    ).format(
+      new Date(
+        value
+      )
+    )
+  }
+
+
+  function activityAgeMinutes(
+    item?: RawRow
+  ) {
+
+    const value =
+      itemActivityTimestamp(
+        item
+      )
+
+    if (!value) {
+      return 0
+    }
+
+
+    return Math.max(
+      0,
+      Math.floor(
+        (
+          Date.now() -
+          value
+        ) /
+        60000
+      )
+    )
+  }
+
+
+  function orderGroupKey(
+    item: RawRow
+  ) {
+
+    const ticket =
+      ticketMap.get(
+        itemTicketId(
+          item
+        )
+      )
+
+
+    const order =
+      orderNo(
+        ticket
+      )
+
+
+    if (
+      order &&
+      order !==
+      'ORDER'
+    ) {
+      return `order:${order}`
+    }
+
+
+    return (
+      `ticket:${
+        itemTicketId(
+          item
+        )
+      }`
+    )
+  }
+
+
+  // One visual card per restaurant order.
+  // If a new add-on arrives for an older order, that order returns
+  // to the top because grouping is sorted by latest item activity.
+  const queueGroupMap =
+    queueItems.reduce<
+      Map<
+        string,
+        RawRow[]
+      >
+    >(
+      (
+        groups,
+        item
+      ) => {
+
+        const key =
+          orderGroupKey(
+            item
+          )
+
+        const current =
+          groups.get(
+            key
+          ) ||
+          []
+
+        current.push(
+          item
+        )
+
+        groups.set(
+          key,
+          current
+        )
+
+        return groups
+
+      },
+      new Map<
+        string,
+        RawRow[]
+      >()
+    )
+
+
+  const queueGroups:
+    RawRow[][] =
+    Array.from(
+      queueGroupMap.values()
+    )
+      .map(
+        (group) =>
+          group.slice().sort(
+            (
+              a,
+              b
+            ) => {
+
+              const roundDiff =
+                roundNo(
+                  b
+                ) -
+                roundNo(
+                  a
+                )
+
+              if (
+                roundDiff !==
+                0
+              ) {
+                return roundDiff
+              }
+
+              return (
+                itemActivityTimestamp(
+                  a
+                ) -
+                itemActivityTimestamp(
+                  b
+                )
+              )
+
+            }
+          )
+      )
+      .sort(
+        (
+          a,
+          b
+        ) => {
+
+          const latestA =
+            Math.max(
+              ...a.map(
+                itemActivityTimestamp
+              )
+            )
+
+          const latestB =
+            Math.max(
+              ...b.map(
+                itemActivityTimestamp
+              )
+            )
+
+          return (
+            latestB -
+            latestA
+          )
+
+        }
+      )
+
+
   function countStation(
     value:
       'KITCHEN'
@@ -847,52 +1222,31 @@ export default function KitchenDisplayClient({
 
 
   // ============================================================
-  // TASK CARD
+  // ORDER CARD
+  //
+  // One card = one restaurant order.
+  // Round/add-on items stay inside the same order card.
+  // Item time/age is based on the item's own created_at,
+  // not the original ticket time.
   // ============================================================
 
-  function TaskCard({
-    item,
+  function OrderCard({
+    data,
   }: {
-    item: RawRow
+    data: RawRow[]
   }) {
 
+    const firstItem =
+      data[0]
+
     const ticket =
-      ticketMap.get(
-        itemTicketId(
-          item
-        )
-      )
-
-
-    const status =
-      itemStatus(
-        item
-      )
-
-
-    const itemUnits =
-      units
-        .filter(
-          (unit) =>
-            String(
-              unit.kitchen_ticket_item_id ??
-              ''
-            ) ===
-            itemId(
-              item
+      firstItem
+        ? ticketMap.get(
+            itemTicketId(
+              firstItem
             )
-        )
-        .sort(
-          (a, b) =>
-            Number(
-              a.unit_no ??
-              0
-            ) -
-            Number(
-              b.unit_no ??
-              0
-            )
-        )
+          )
+        : undefined
 
 
     const table =
@@ -901,16 +1255,72 @@ export default function KitchenDisplayClient({
       )
 
 
-    return (
-      <article className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    const latestItem =
+      data.reduce(
+        (
+          latest,
+          item
+        ) =>
+          itemActivityTimestamp(
+            item
+          ) >
+          itemActivityTimestamp(
+            latest
+          )
+            ? item
+            : latest,
+        firstItem
+      )
 
-        <div className="border-b border-zinc-100 p-4">
+
+    const latestRound =
+      Math.max(
+        1,
+        ...data.map(
+          (item) =>
+            roundNo(
+              item
+            )
+        )
+      )
+
+
+    const hasAddon =
+      latestRound >
+      1
+
+
+    const hasPreparing =
+      data.some(
+        (item) =>
+          itemStatus(
+            item
+          ) ===
+          'PREPARING'
+      )
+
+
+    return (
+
+      <article
+        className={
+          `overflow-hidden rounded-xl border bg-white shadow-sm ${
+            hasAddon
+              ? 'border-purple-300 ring-1 ring-purple-100'
+              : hasPreparing
+                ? 'border-amber-300'
+                : 'border-zinc-200'
+          }`
+        }
+      >
+
+        <div className="border-b border-zinc-100 p-3">
 
           <div className="flex items-start justify-between gap-3">
 
-            <div>
+            <div className="min-w-0">
 
-              <p className="text-xs font-black uppercase tracking-wide text-red-800">
+              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-red-800">
                 {
                   sourceLabel(
                     ticket
@@ -918,14 +1328,15 @@ export default function KitchenDisplayClient({
                 }
                 {' · '}
                 {
-                  itemStation(
-                    item
-                  )
+                  station ===
+                  'ALL'
+                    ? 'KDS'
+                    : station
                 }
               </p>
 
 
-              <p className="mt-1 text-lg font-black">
+              <p className="mt-1 truncate text-lg font-black leading-tight">
                 {
                   orderNo(
                     ticket
@@ -934,254 +1345,405 @@ export default function KitchenDisplayClient({
               </p>
 
 
-              {roundNo(
-                item
-              ) > 1 && (
+              {table && (
 
-                <p className="mt-2 inline-flex rounded-full bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
-                  ADD-ON · ROUND {
-                    roundNo(
-                      item
-                    )
+                <p className="mt-1 text-sm font-black text-blue-700">
+                  {table}
+                </p>
+
+              )}
+
+
+              {hasAddon && (
+
+                <p className="mt-1.5 inline-flex rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-black text-purple-800">
+                  NEW ADD-ON · ROUND {
+                    latestRound
                   }
                 </p>
 
               )}
 
-
-              {table && (
-                <p className="mt-1 text-sm font-bold text-blue-700">
-                  {table}
-                </p>
-              )}
-
             </div>
 
 
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold text-zinc-600">
-              {
-                createdAt(
-                  ticket
-                )
-              }
-            </span>
+            <div className="shrink-0 text-right">
+
+              <span className="inline-flex rounded-lg bg-zinc-100 px-2 py-1 text-[11px] font-black text-zinc-600">
+                {
+                  formatActivityTime(
+                    latestItem
+                  )
+                }
+              </span>
+
+              <p
+                className={
+                  `mt-1 text-[10px] font-black ${
+                    activityAgeMinutes(
+                      latestItem
+                    ) >=
+                    20
+                      ? 'text-red-700'
+                      : activityAgeMinutes(
+                            latestItem
+                          ) >=
+                          10
+                        ? 'text-amber-700'
+                        : 'text-zinc-400'
+                  }`
+                }
+              >
+                LATEST {
+                  activityAgeMinutes(
+                    latestItem
+                  )
+                } MIN
+              </p>
+
+            </div>
 
           </div>
 
         </div>
 
 
-        <div className="p-5">
+        <div className="divide-y divide-zinc-100">
 
-          <div className="flex items-start gap-4">
+          {data.map(
+            (item) => {
 
-            <div
-              className={
-                `mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-black ${
-                  status ===
-                    'READY'
-                    ? 'bg-green-100 text-green-700'
-                    : status ===
-                        'PREPARING'
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-zinc-100 text-zinc-600'
-                }`
-              }
-            >
-              {
-                status ===
-                'READY'
-                  ? '✓'
-                  : quantity(
-                      item
-                    )
-              }
-            </div>
+              const status =
+                itemStatus(
+                  item
+                )
 
-
-            <div className="min-w-0 flex-1">
-
-              <p className="text-xl font-black">
-                {
-                  menuName(
-                    item
+              const itemUnits =
+                units
+                  .filter(
+                    (unit) =>
+                      String(
+                        unit.kitchen_ticket_item_id ??
+                        ''
+                      ) ===
+                      itemId(
+                        item
+                      )
                   )
-                }
-              </p>
+                  .sort(
+                    (
+                      a,
+                      b
+                    ) =>
+                      Number(
+                        a.unit_no ??
+                        0
+                      ) -
+                      Number(
+                        b.unit_no ??
+                        0
+                      )
+                  )
 
 
-              {quantity(
-                item
-              ) > 1 && (
-
-                <p className="mt-1 text-xs font-bold text-zinc-400">
-                  {
-                    quantity(
-                      item
-                    )
-                  } individual items
-                </p>
-
-              )}
+              const itemRound =
+                roundNo(
+                  item
+                )
 
 
-              {notes(
-                item
-              ) && (
+              return (
 
-                <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-                  Notes:{' '}
-                  {
-                    notes(
+                <section
+                  key={
+                    itemId(
                       item
                     )
                   }
-                </div>
+                  className={
+                    `p-3 ${
+                      itemRound >
+                      1
+                        ? 'bg-purple-50/40'
+                        : ''
+                    }`
+                  }
+                >
 
-              )}
+                  <div className="flex items-start gap-3">
 
-            </div>
-
-          </div>
-
-
-          <div className="mt-5 space-y-3">
-
-            {itemUnits.map(
-              (unit) => {
-
-                const unitStatus =
-                  String(
-                    unit.status ??
-                    'NEW'
-                  ).toUpperCase()
-
-                const unitNo =
-                  Number(
-                    unit.unit_no ??
-                    1
-                  )
-
-                const unitId =
-                  String(
-                    unit.id ??
-                    ''
-                  )
-
-                const isUnitUpdating =
-                  updatingId ===
-                  unitId
-
-                const isReady =
-                  unitStatus ===
-                    'READY' ||
-                  unitStatus ===
-                    'COMPLETED'
-
-                const isCancelled =
-                  unitStatus ===
-                    'CANCELLED'
+                    <div
+                      className={
+                        `mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black ${
+                          status ===
+                          'PREPARING'
+                            ? 'bg-amber-100 text-amber-700'
+                            : itemRound >
+                                1
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-zinc-100 text-zinc-700'
+                        }`
+                      }
+                    >
+                      {
+                        quantity(
+                          item
+                        )
+                      }
+                    </div>
 
 
-                return (
+                    <div className="min-w-0 flex-1">
 
-                  <div
-                    key={
-                      unitId
-                    }
-                    className="flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4"
-                  >
+                      <div className="flex items-start justify-between gap-2">
 
-                    <div className="min-w-0">
+                        <div className="min-w-0">
 
-                      <p className="font-black">
-                        {
-                          menuName(
-                            item
-                          )
-                        }
-                      </p>
+                          <p className="text-lg font-black leading-tight">
+                            {
+                              menuName(
+                                item
+                              )
+                            }
+                          </p>
 
 
-                      {itemUnits.length >
-                        1 && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
 
-                        <p className="mt-1 text-xs font-bold text-zinc-500">
-                          Item {
-                            unitNo
-                          } / {
-                            itemUnits.length
-                          }
+                            <span
+                              className={
+                                `rounded-md px-1.5 py-0.5 text-[9px] font-black ${
+                                  itemStation(
+                                    item
+                                  ) ===
+                                  'BAR'
+                                    ? 'bg-blue-50 text-blue-700'
+                                    : 'bg-red-50 text-red-800'
+                                }`
+                              }
+                            >
+                              {
+                                itemStation(
+                                  item
+                                )
+                              }
+                            </span>
+
+
+                            {itemRound >
+                              1 && (
+
+                              <span className="rounded-md bg-purple-100 px-1.5 py-0.5 text-[9px] font-black text-purple-800">
+                                ADD-ON · ROUND {
+                                  itemRound
+                                }
+                              </span>
+
+                            )}
+
+
+                            <span className="text-[10px] font-bold text-zinc-400">
+                              {
+                                formatActivityTime(
+                                  item
+                                )
+                              }
+                              {' · '}
+                              WAIT {
+                                activityAgeMinutes(
+                                  item
+                                )
+                              } MIN
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+
+                      {quantity(
+                        item
+                      ) > 1 && (
+
+                        <p className="mt-1 text-[10px] font-bold text-zinc-400">
+                          {
+                            quantity(
+                              item
+                            )
+                          } individual items
                         </p>
+
+                      )}
+
+
+                      {notes(
+                        item
+                      ) && (
+
+                        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-bold text-amber-900">
+                          Notes:{' '}
+                          {
+                            notes(
+                              item
+                            )
+                          }
+                        </div>
 
                       )}
 
                     </div>
 
+                  </div>
 
-                    {isReady ? (
 
-                      <span className="shrink-0 rounded-xl bg-green-100 px-4 py-3 text-xs font-black text-green-700">
-                        ✓ {
+                  <div className="mt-2 space-y-1.5">
+
+                    {itemUnits.map(
+                      (unit) => {
+
+                        const unitStatus =
+                          String(
+                            unit.status ??
+                            'NEW'
+                          ).toUpperCase()
+
+                        const unitNo =
+                          Number(
+                            unit.unit_no ??
+                            1
+                          )
+
+                        const unitId =
+                          String(
+                            unit.id ??
+                            ''
+                          )
+
+                        const isUnitUpdating =
+                          updatingId ===
+                          unitId
+
+                        const isReady =
+                          unitStatus ===
+                            'READY' ||
                           unitStatus ===
                             'COMPLETED'
-                            ? 'DONE'
-                            : 'READY'
-                        }
-                      </span>
 
-                    ) : isCancelled ? (
+                        const isCancelled =
+                          unitStatus ===
+                          'CANCELLED'
 
-                      <span className="shrink-0 rounded-xl bg-zinc-200 px-4 py-3 text-xs font-black text-zinc-500">
-                        CANCELLED
-                      </span>
 
-                    ) : (
+                        return (
 
-                      <button
-                        type="button"
-                        disabled={
-                          isUnitUpdating
-                        }
-                        onClick={() =>
-                          void updateUnit(
-                            unit
-                          )
-                        }
-                        className="shrink-0 rounded-xl bg-green-700 px-5 py-3 text-xs font-black text-white transition hover:bg-green-800 disabled:opacity-50"
-                      >
-                        {
-                          isUnitUpdating
-                            ? 'UPDATING...'
-                            : '✓ READY / DONE'
-                        }
-                      </button>
+                          <div
+                            key={
+                              unitId
+                            }
+                            className="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white p-2"
+                          >
+
+                            <div className="min-w-0">
+
+                              <p className="truncate text-sm font-black leading-tight">
+                                {
+                                  menuName(
+                                    item
+                                  )
+                                }
+                              </p>
+
+
+                              {itemUnits.length >
+                                1 && (
+
+                                <p className="mt-0.5 text-[10px] font-bold text-zinc-500">
+                                  Item {
+                                    unitNo
+                                  } / {
+                                    itemUnits.length
+                                  }
+                                </p>
+
+                              )}
+
+                            </div>
+
+
+                            {isReady ? (
+
+                              <span className="shrink-0 rounded-lg bg-green-100 px-3 py-2 text-[10px] font-black text-green-700">
+                                ✓ {
+                                  unitStatus ===
+                                  'COMPLETED'
+                                    ? 'DONE'
+                                    : 'READY'
+                                }
+                              </span>
+
+                            ) : isCancelled ? (
+
+                              <span className="shrink-0 rounded-lg bg-zinc-200 px-3 py-2 text-[10px] font-black text-zinc-500">
+                                CANCELLED
+                              </span>
+
+                            ) : (
+
+                              <button
+                                type="button"
+                                disabled={
+                                  isUnitUpdating
+                                }
+                                onClick={() =>
+                                  void updateUnit(
+                                    unit
+                                  )
+                                }
+                                className="shrink-0 rounded-lg bg-green-700 px-3 py-2 text-[10px] font-black text-white transition hover:bg-green-800 disabled:opacity-50"
+                              >
+                                {
+                                  isUnitUpdating
+                                    ? 'UPDATING...'
+                                    : '✓ READY / DONE'
+                                }
+                              </button>
+
+                            )}
+
+                          </div>
+
+                        )
+
+                      }
+                    )}
+
+
+                    {itemUnits.length ===
+                      0 && (
+
+                      <div className="rounded-lg border border-dashed border-zinc-300 p-2.5 text-center text-[10px] font-bold text-zinc-400">
+                        Preparing item checklist...
+                      </div>
 
                     )}
 
                   </div>
 
-                )
+                </section>
 
-              }
-            )}
+              )
 
-
-            {itemUnits.length ===
-              0 && (
-
-              <div className="rounded-xl border border-dashed border-zinc-300 p-4 text-center text-xs font-bold text-zinc-400">
-                Preparing item checklist...
-              </div>
-
-            )}
-
-          </div>
+            }
+          )}
 
         </div>
 
       </article>
+
     )
+
   }
 
 
@@ -1193,25 +1755,38 @@ export default function KitchenDisplayClient({
   }: {
     title: string
     subtitle: string
-    data: RawRow[]
+    data: RawRow[][]
     kind:
       'NEW'
       | 'PREPARING'
       | 'READY'
   }) {
 
+    const totalItems =
+      data.reduce(
+        (
+          total,
+          group
+        ) =>
+          total +
+          group.length,
+        0
+      )
+
+
     return (
+
       <section>
 
-        <div className="mb-4 flex items-end justify-between">
+        <div className="mb-3 flex items-end justify-between">
 
           <div>
 
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">
               {subtitle}
             </p>
 
-            <h2 className="mt-1 text-2xl font-black">
+            <h2 className="mt-0.5 text-xl font-black">
               {title}
             </h2>
 
@@ -1220,9 +1795,9 @@ export default function KitchenDisplayClient({
 
           <span
             className={
-              `rounded-full px-3 py-1 text-sm font-black ${
+              `rounded-lg px-2.5 py-1 text-xs font-black ${
                 kind ===
-                  'READY'
+                'READY'
                   ? 'bg-green-100 text-green-700'
                   : kind ===
                       'PREPARING'
@@ -1231,25 +1806,32 @@ export default function KitchenDisplayClient({
               }`
             }
           >
-            {data.length}
+            {data.length} ORDERS · {
+              totalItems
+            } ITEMS
           </span>
 
         </div>
 
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid items-start gap-3 md:grid-cols-3 xl:grid-cols-4">
 
           {data.map(
-            (item) => (
+            (
+              group
+            ) => (
 
-              <TaskCard
+              <OrderCard
                 key={
+                  itemTicketId(
+                    group[0]
+                  ) ||
                   itemId(
-                    item
+                    group[0]
                   )
                 }
-                item={
-                  item
+                data={
+                  group
                 }
               />
 
@@ -1260,7 +1842,7 @@ export default function KitchenDisplayClient({
           {data.length ===
             0 && (
 
-            <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm font-semibold text-zinc-400">
+            <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm font-semibold text-zinc-400 md:col-span-3 xl:col-span-4">
               No items
             </div>
 
@@ -1269,40 +1851,42 @@ export default function KitchenDisplayClient({
         </div>
 
       </section>
+
     )
+
   }
 
 
   return (
-    <main className="min-h-screen bg-zinc-100 p-6 text-zinc-950">
+    <main className="min-h-screen bg-zinc-100 p-3 text-zinc-950 sm:p-4">
 
-      <div className="mx-auto max-w-[1700px]">
+      <div className="mx-auto max-w-[1800px]">
 
-        <header className="mb-7">
+        <header className="mb-4">
 
-          <div className="flex flex-wrap items-end justify-between gap-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
 
             <div>
 
               <Link
                 href="/dashboard"
-                className="text-sm font-semibold text-zinc-500 hover:text-red-900"
+                className="text-xs font-semibold text-zinc-500 hover:text-red-900"
               >
                 ← Dashboard
               </Link>
 
 
-              <p className="mt-5 text-xs font-black uppercase tracking-[0.2em] text-red-800">
+              <p className="mt-2 text-[10px] font-black uppercase tracking-[0.16em] text-red-800">
                 Restaurant Operations
               </p>
 
 
-              <h1 className="mt-1 text-4xl font-black">
+              <h1 className="mt-0.5 text-2xl font-black">
                 Kitchen Display
               </h1>
 
 
-              <p className="mt-2 text-zinc-500">
+              <p className="mt-1 text-xs font-semibold text-zinc-500">
                 Single queue · newest order first · one tap when ready.
               </p>
 
@@ -1315,7 +1899,7 @@ export default function KitchenDisplayClient({
 
                 <Link
                   href="/dashboard/pos/orders"
-                  className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-bold"
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-bold"
                 >
                   Open Orders
                 </Link>
@@ -1331,7 +1915,7 @@ export default function KitchenDisplayClient({
                 onClick={() =>
                   void load()
                 }
-                className="rounded-xl bg-zinc-950 px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+                className="rounded-lg bg-zinc-950 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
               >
                 {
                   refreshing
@@ -1345,7 +1929,7 @@ export default function KitchenDisplayClient({
           </div>
 
 
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-3 flex flex-wrap gap-2">
 
             <button
               type="button"
@@ -1355,7 +1939,7 @@ export default function KitchenDisplayClient({
                 )
               }
               className={
-                `rounded-xl px-5 py-3 text-sm font-black ${
+                `rounded-lg px-4 py-2 text-xs font-black ${
                   station ===
                     'KITCHEN'
                     ? 'bg-red-900 text-white'
@@ -1381,7 +1965,7 @@ export default function KitchenDisplayClient({
                 )
               }
               className={
-                `rounded-xl px-5 py-3 text-sm font-black ${
+                `rounded-lg px-4 py-2 text-xs font-black ${
                   station ===
                     'BAR'
                     ? 'bg-blue-700 text-white'
@@ -1407,7 +1991,7 @@ export default function KitchenDisplayClient({
                 )
               }
               className={
-                `rounded-xl px-5 py-3 text-sm font-black ${
+                `rounded-lg px-4 py-2 text-xs font-black ${
                   station ===
                     'ALL'
                     ? 'bg-zinc-950 text-white'
@@ -1434,7 +2018,7 @@ export default function KitchenDisplayClient({
 
         {error && (
 
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
             {error}
           </div>
 
@@ -1443,7 +2027,7 @@ export default function KitchenDisplayClient({
 
         {loading ? (
 
-          <div className="rounded-2xl bg-white p-16 text-center font-bold text-zinc-500">
+          <div className="rounded-xl bg-white p-12 text-center font-bold text-zinc-500">
             Loading Kitchen Display...
           </div>
 
@@ -1453,9 +2037,9 @@ export default function KitchenDisplayClient({
 
             <BoardColumn
               title="Kitchen Queue"
-              subtitle="Newest Order First · One Tap Ready"
+              subtitle="Newest Activity First · Add-ons Return to Top"
               data={
-                queueItems
+                queueGroups
               }
               kind="NEW"
             />
