@@ -27,6 +27,14 @@ type PermissionRow = {
 }
 
 
+
+type PlatformAccessRow = {
+  platform_role: string
+  is_active: boolean
+  is_platform_admin: boolean
+}
+
+
 type ModuleCode =
   | 'WAITER'
   | 'KITCHEN'
@@ -101,6 +109,41 @@ export default async function DashboardPage({
   ) {
     redirect('/login')
   }
+
+
+
+  // =====================================================
+  // PLATFORM ACCESS
+  //
+  // Platform Admin is intentionally separate from the
+  // operational role such as SUPER_ADMIN / MANAGEMENT.
+  // =====================================================
+
+  const {
+    data: platformAccessData,
+  } =
+    await supabase.rpc(
+      'get_my_platform_access'
+    )
+
+
+  const platformAccessRows =
+    (
+      platformAccessData ||
+      []
+    ) as PlatformAccessRow[]
+
+
+  const platformAccess =
+    platformAccessRows[0]
+
+
+  const isPlatformAdmin =
+    Boolean(
+      platformAccess?.is_active &&
+      platformAccess?.is_platform_admin
+    )
+
 
 
   // =====================================================
@@ -1102,6 +1145,67 @@ export default async function DashboardPage({
           </div>
 
         </div>
+
+
+        {/* PLATFORM ADMIN */}
+
+        {isPlatformAdmin && (
+
+          <section className="mb-10">
+
+            <Link
+              href="/platform-admin"
+              className="group block overflow-hidden rounded-2xl bg-slate-950 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+
+              <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between">
+
+                <div className="min-w-0">
+
+                  <div className="flex flex-wrap items-center gap-2">
+
+                    <span className="rounded-md bg-white px-2.5 py-1 text-[10px] font-black tracking-[0.18em] text-slate-950">
+                      ECOSUITE
+                    </span>
+
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Platform Admin
+                    </span>
+
+                  </div>
+
+
+                  <h2 className="mt-4 text-2xl font-bold tracking-tight">
+                    EcoSuite Control Center
+                  </h2>
+
+
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                    Manage companies, branches, packages, subscriptions,
+                    module access, add-ons and commercial lifecycle.
+                  </p>
+
+                </div>
+
+
+                <div className="shrink-0">
+
+                  <span className="inline-flex items-center rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition group-hover:bg-slate-100">
+                    Open Platform Admin
+                    <span className="ml-2">
+                      →
+                    </span>
+                  </span>
+
+                </div>
+
+              </div>
+
+            </Link>
+
+          </section>
+
+        )}
 
 
         {/* OPERATIONS */}
