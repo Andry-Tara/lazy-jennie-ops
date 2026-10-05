@@ -421,11 +421,11 @@ export default async function PlatformAdminPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="rounded-md bg-slate-950 px-2 py-1 text-[10px] font-bold tracking-[0.15em] text-white">
-                TARATECH
+                ECOSUITE
               </span>
 
               <span className="text-xs font-medium text-slate-400">
-                CONTROL PLANE
+                PLATFORM
               </span>
             </div>
 
@@ -473,17 +473,17 @@ export default async function PlatformAdminPage() {
         <section>
           <div>
             <p className="text-sm font-medium text-slate-500">
-              SaaS Operations
+              Business Operations Platform
             </p>
 
             <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-              Commercial Control Center
+              Platform Control Center
             </h2>
 
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-              Manage company ownership, branch subscriptions,
-              commercial packages, modules and payment lifecycle.
-              Operational entitlement enforcement is not active yet.
+              Manage companies, branch packages, subscriptions,
+              modules and commercial lifecycle.
+              Operational entitlement enforcement will be enabled after subscription setup is validated.
             </p>
           </div>
 
@@ -583,6 +583,7 @@ export default async function PlatformAdminPage() {
                     <th className="px-5 py-3 font-medium">Package</th>
                     <th className="px-5 py-3 font-medium">Subscription</th>
                     <th className="px-5 py-3 font-medium">Ends</th>
+                    <th className="px-5 py-3 text-right font-medium">Action</th>
                   </tr>
                 </thead>
 
@@ -624,6 +625,30 @@ export default async function PlatformAdminPage() {
                       <td className="px-5 py-4 text-slate-500">
                         {dateOnly(
                           outlet.subscription_ends_at
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4 text-right">
+                        {outlet.current_subscription_id ? (
+                          <a
+                            href="#subscriptions"
+                            className="inline-flex rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            View
+                          </a>
+                        ) : outlet.type === 'CENTRAL_KITCHEN' ? (
+                          <span className="text-xs font-medium text-slate-400">
+                            Package pending
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/platform-admin/subscriptions/new?outlet=${encodeURIComponent(
+                              outlet.id
+                            )}`}
+                            className="inline-flex rounded-lg bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                          >
+                            Assign Package
+                          </Link>
                         )}
                       </td>
                     </tr>
@@ -711,7 +736,7 @@ export default async function PlatformAdminPage() {
             count={modules.length}
           />
 
-          <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {modules.map((module) => (
               <div
                 key={module.id}
