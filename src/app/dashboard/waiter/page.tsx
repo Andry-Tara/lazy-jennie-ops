@@ -8,6 +8,7 @@ import WaiterTableMapClient
 
 import DashboardLogoutButton
   from '@/components/auth/DashboardLogoutButton'
+import { getRuntimeModuleOutlets } from '@/lib/saas/runtime-module-access'
 
 
 export default async function WaiterPage() {
@@ -98,6 +99,36 @@ export default async function WaiterPage() {
   }
 
 
+  const waiterRuntime =
+    await getRuntimeModuleOutlets(
+      supabase,
+      'WAITER'
+    )
+
+  const waiterAllowedOutletIds =
+    waiterRuntime.allowedOutletIds
+
+  if (
+    profile?.outlet_id &&
+    !waiterAllowedOutletIds.includes(
+      profile.outlet_id
+    )
+  ) {
+    redirect(
+      '/dashboard?denied=WAITER'
+    )
+  }
+
+  if (
+    !profile?.outlet_id &&
+    waiterAllowedOutletIds.length === 0
+  ) {
+    redirect(
+      '/dashboard?denied=WAITER'
+    )
+  }
+
+
   // ========================================================
   // WAITER DATA
   // ========================================================
@@ -117,6 +148,10 @@ export default async function WaiterPage() {
           code,
           name
         `)
+        .in(
+          'id',
+          waiterAllowedOutletIds
+        )
         .order(
           'name'
         ),
@@ -146,6 +181,10 @@ export default async function WaiterPage() {
           active_order_opened_at,
           active_order_count
         `)
+        .in(
+          'outlet_id',
+          waiterAllowedOutletIds
+        )
         .order(
           'code'
         ),

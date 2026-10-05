@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import POSClient from './POSClient'
+import { getRuntimeModuleOutlets } from '@/lib/saas/runtime-module-access'
 
 export default async function POSPage() {
   const supabase =
@@ -36,6 +37,36 @@ export default async function POSPage() {
   ) {
     redirect('/dashboard')
   }
+
+  const posRuntime =
+    await getRuntimeModuleOutlets(
+      supabase,
+      'POS'
+    )
+
+  const posAllowedOutletIds =
+    posRuntime.allowedOutletIds
+
+  if (
+    profile?.outlet_id &&
+    !posAllowedOutletIds.includes(
+      profile.outlet_id
+    )
+  ) {
+    redirect(
+      '/dashboard?denied=POS'
+    )
+  }
+
+  if (
+    !profile?.outlet_id &&
+    posAllowedOutletIds.length === 0
+  ) {
+    redirect(
+      '/dashboard?denied=POS'
+    )
+  }
+
 
   let roleCode = ''
 
@@ -176,6 +207,10 @@ export default async function POSPage() {
       .eq(
         'is_active',
         true
+      )
+      .in(
+        'id',
+        posAllowedOutletIds
       )
       .order('name')
 

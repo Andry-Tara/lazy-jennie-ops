@@ -11,6 +11,7 @@ import DashboardLogoutButton
 
 import KitchenDisplayClient
   from './kitchen-display-client'
+import { getRuntimeModuleOutlets } from '@/lib/saas/runtime-module-access'
 
 
 export default async function KitchenPage() {
@@ -119,6 +120,36 @@ export default async function KitchenPage() {
       '/dashboard?denied=KITCHEN'
     )
 
+  }
+
+
+  const kitchenRuntime =
+    await getRuntimeModuleOutlets(
+      supabase,
+      'KITCHEN'
+    )
+
+  const kitchenAllowedOutletIds =
+    kitchenRuntime.allowedOutletIds
+
+  if (
+    profile?.outlet_id &&
+    !kitchenAllowedOutletIds.includes(
+      profile.outlet_id
+    )
+  ) {
+    redirect(
+      '/dashboard?denied=KITCHEN'
+    )
+  }
+
+  if (
+    !profile?.outlet_id &&
+    kitchenAllowedOutletIds.length === 0
+  ) {
+    redirect(
+      '/dashboard?denied=KITCHEN'
+    )
   }
 
 

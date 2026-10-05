@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getRuntimeModuleOutlets } from '@/lib/saas/runtime-module-access'
 
 type SearchParams = Promise<{
   outlet?: string
@@ -31,6 +32,35 @@ export default async function InventoryPage({
   if (!user) {
     redirect('/login')
   }
+
+  const inventoryRuntime =
+    await getRuntimeModuleOutlets(
+      supabase,
+      'INVENTORY'
+    )
+
+  const inventoryAllowedOutletIds =
+    inventoryRuntime.allowedOutletIds
+
+  if (
+    inventoryAllowedOutletIds.length === 0
+  ) {
+    redirect(
+      '/dashboard?denied=INVENTORY'
+    )
+  }
+
+  if (
+    params.outlet &&
+    !inventoryAllowedOutletIds.includes(
+      params.outlet
+    )
+  ) {
+    redirect(
+      '/dashboard?denied=INVENTORY'
+    )
+  }
+
 
   // =====================================================
   // PERMISSIONS
@@ -86,6 +116,10 @@ export default async function InventoryPage({
         minimum_stock,
         stock_status
       `)
+      .in(
+        'outlet_id',
+        inventoryAllowedOutletIds
+      )
       .order('outlet_name')
       .order('item_name')
 
