@@ -630,12 +630,14 @@ export default async function PlatformAdminPage() {
 
                       <td className="px-5 py-4 text-right">
                         {outlet.current_subscription_id ? (
-                          <a
-                            href="#subscriptions"
+                          <Link
+                            href={`/platform-admin/modules?outlet=${encodeURIComponent(
+                              outlet.id
+                            )}`}
                             className="inline-flex rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                           >
-                            View
-                          </a>
+                            Manage
+                          </Link>
                         ) : outlet.type === 'CENTRAL_KITCHEN' ? (
                           <span className="text-xs font-medium text-slate-400">
                             Package pending
